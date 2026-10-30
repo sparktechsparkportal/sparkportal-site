@@ -74,6 +74,15 @@ img{max-width:100%}
 .sp-dot{width:20px;height:20px;border-radius:50%;border:3px solid var(--gold);background:transparent;transition:background .1s ease}
 .sp-dot-on{background:var(--gold)}
 .sp-pin-msg{margin:0;min-height:1.5em;font-weight:700;color:var(--bad);max-width:34ch}
+.sp-open{gap:10px}
+.sp-fields{display:flex;flex-direction:column;gap:14px;width:min(100%,360px);margin-top:10px;text-align:left}
+.sp-field-label{display:flex;flex-direction:column;gap:6px}
+.sp-field-name{font-weight:800;font-size:15px;color:var(--gold-text);letter-spacing:.04em;text-transform:uppercase}
+.sp-field{width:100%;min-height:56px;padding:12px 16px;border:2px solid var(--line);border-radius:16px;background:var(--card-deep);color:var(--cream);font:700 22px/1.2 var(--text);letter-spacing:.04em;box-shadow:inset 0 2px 8px var(--shadow)}
+.sp-field::placeholder{color:var(--muted-2);font-weight:500;font-size:17px;letter-spacing:0;text-transform:none}
+.sp-open-btn{width:min(100%,360px);margin-top:4px;font-size:18px}
+.sp-open-msg{min-height:1.5em}
+.sp-open-help{max-width:40ch}
 .sp-keys{display:grid;grid-template-columns:repeat(3,74px);gap:12px;margin-top:8px}
 .sp-key{height:74px;border:1px solid var(--line-soft);border-radius:50%;background:linear-gradient(180deg,var(--card-2),var(--card));color:var(--cream);font:700 28px/1 var(--display);box-shadow:0 6px 14px var(--shadow)}
 .sp-key:active{transform:translateY(2px);box-shadow:none}
@@ -138,6 +147,15 @@ img{max-width:100%}
 .sp-care-msg{margin:0;font-weight:800;color:var(--cream)}
 .sp-care-actions{display:flex;flex-wrap:wrap;gap:8px}
 .sp-care-actions .sp-btn{min-height:44px;padding:8px 16px;font-size:15px}
+.sp-care-btn{position:relative}
+.sp-care-done{border-color:var(--gold);color:var(--gold-text)}
+.sp-care-done::after{content:" ✓";font-weight:900}
+.sp-care-count{margin:0;font-size:13px;color:var(--muted)}
+.sp-mood{margin:0;font-weight:800;color:var(--gold-text)}
+.sp-mood-missing{color:var(--muted)}
+.sp-care-all{margin:0;padding:8px 12px;border-radius:12px;background:rgba(242,212,154,.14);border:1px solid var(--gold);color:var(--gold-text);font-weight:800}
+.sp-care-glow{animation:sp-glow 1.6s ease-out}
+@keyframes sp-glow{0%{box-shadow:0 0 0 1px var(--gold),0 0 48px rgba(233,194,122,.6)}100%{box-shadow:none}}
 
 /* Meet the companions */
 .sp-meet-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
@@ -618,7 +636,49 @@ var PointsCore = (function () {
     return { COMPANIONS: COMPANIONS, EGG_MARK: EGG_MARK, MARKS: MARKS, companion: companion, stageFor: stageFor, nextMark: nextMark, growth: growth, record: record, parse: parse, midnightAfter: midnightAfter };
   })();
 
-  return { SPARKADE: SPARKADE, islandFor: islandFor, ISLAND_STAGES: ISLAND_STAGES, LEVELS: LEVELS, AFTER_TEN: AFTER_TEN, STAGE_NAMES: STAGE_NAMES, SPECIES: SPECIES, COLOURS: COLOURS, ICONS: ICONS,
+  /* ---------- Care from home (pet, water, snack, walk) and the mood it gives ----------
+   * The owner's rule: care is free. It never awards or spends Sparkles and never changes a companion's growth; the only
+   * thing it changes is when each care last happened, and the mood read from those times. One rule here, so the pupil's
+   * page, the teacher's board and the server say the same mood for the same care. Days are Seoul days. */
+  var CARE = (function () {
+    var ACTIONS = ['pet', 'water', 'snack', 'walk'], FEED = ['water', 'snack'], PLAY = ['pet', 'walk'], SEOUL = 9 * 3600000, DAY = 86400000;
+    var MOODS = { great: 'feels great', okay: 'is doing okay', missing: 'is missing you' };
+    var LABELS = { pet: 'Pet', water: 'Water', snack: 'Snack', walk: 'Walk' };
+    function valid(action) { return ACTIONS.indexOf(String(action || '')) >= 0; }
+    function day(ms) { return new Date(Number(ms) + SEOUL).toISOString().slice(0, 10); }
+    /* The last care times as ms, 0 for none or junk, never in the future. */
+    function times(last, nowMs) {
+      var now = Number(nowMs) || Date.now(), out = {};
+      ACTIONS.forEach(function (a) { var v = last && last[a], t = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? Date.parse(v) : NaN; out[a] = isFinite(t) && t <= now ? t : 0; });
+      return out;
+    }
+    /* The cares done today (Seoul), in ACTIONS order. */
+    function doneToday(last, nowMs) {
+      var now = Number(nowMs) || Date.now(), t = times(last, now), today = day(now);
+      return ACTIONS.filter(function (a) { return t[a] && day(t[a]) === today; });
+    }
+    function allToday(last, nowMs) { return doneToday(last, nowMs).length === ACTIONS.length; }
+    /* great: fed (water or snack) and played with (pet or walk) today; missing: no care for two days; okay: the rest,
+     * including a companion never cared for yet (it does not start out missing anyone). */
+    function mood(last, nowMs) {
+      var now = Number(nowMs) || Date.now(), done = doneToday(last, now), t = times(last, now), latest = 0;
+      ACTIONS.forEach(function (a) { if (t[a] > latest) latest = t[a]; });
+      var fed = done.some(function (a) { return FEED.indexOf(a) >= 0; }), played = done.some(function (a) { return PLAY.indexOf(a) >= 0; });
+      if (fed && played) return 'great';
+      if (latest && now - latest >= 2 * DAY) return 'missing';
+      return 'okay';
+    }
+    function line(m) { return MOODS[m] || MOODS.okay; }
+    /* Seconds before this care can be done again (0 when it can be done now). */
+    function cooldown(last, action, nowMs, seconds) {
+      var now = Number(nowMs) || Date.now(), t = times(last, now)[action] || 0, wait = Math.max(0, Number(seconds) || 0) * 1000;
+      if (!t || !wait) return 0;
+      return Math.max(0, Math.ceil((t + wait - now) / 1000));
+    }
+    return { ACTIONS: ACTIONS, FEED: FEED, PLAY: PLAY, MOODS: MOODS, LABELS: LABELS, valid: valid, day: day, times: times, doneToday: doneToday, allToday: allToday, mood: mood, line: line, cooldown: cooldown };
+  })();
+
+  return { SPARKADE: SPARKADE, CARE: CARE, islandFor: islandFor, ISLAND_STAGES: ISLAND_STAGES, LEVELS: LEVELS, AFTER_TEN: AFTER_TEN, STAGE_NAMES: STAGE_NAMES, SPECIES: SPECIES, COLOURS: COLOURS, ICONS: ICONS,
     levelFor: levelFor, stageFor: stageFor, totals: totals, goalProgress: goalProgress, creatureParts: creatureParts, validCreature: validCreature,
     creatureFor: creatureFor, speciesName: speciesName, creatureSvg: creatureSvg, jarSvg: jarSvg, JAR_SLOTS: JAR_SLOTS.length, cleanName: cleanName, shortNames: shortNames, byName: byName,
     signed: signed, validIcon: validIcon, defaultBehaviours: defaultBehaviours, isExampleSet: isExampleSet, CURRENCY: CURRENCY, IDEAS: IDEAS, word: word, sparks: sparks };
@@ -705,16 +765,21 @@ window.SP_GATEWAY = "https://script.google.com/macros/s/AKfycbz_yisUT04XOY23wQSd
 var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-egg":"art/dragon-egg.webp","dragon-1":"art/dragon-1.webp","dragon-2":"art/dragon-2.webp","dragon-3":"art/dragon-3.webp","dragon-4":"art/dragon-4.webp","dragon-5":"art/dragon-5.webp","wolf-egg":"art/wolf-egg.webp","wolf-1":"art/wolf-1.webp","wolf-2":"art/wolf-2.webp","wolf-3":"art/wolf-3.webp","wolf-4":"art/wolf-4.webp","wolf-5":"art/wolf-5.webp","sunbird-egg":"art/sunbird-egg.webp","sunbird-1":"art/sunbird-1.webp","sunbird-2":"art/sunbird-2.webp","sunbird-3":"art/sunbird-3.webp","sunbird-4":"art/sunbird-4.webp","sunbird-5":"art/sunbird-5.webp","otter-egg":"art/otter-egg.webp","otter-1":"art/otter-1.webp","otter-2":"art/otter-2.webp","otter-3":"art/otter-3.webp","otter-4":"art/otter-4.webp","otter-5":"art/otter-5.webp","grove-egg":"art/grove-egg.webp","grove-1":"art/grove-1.webp","grove-2":"art/grove-2.webp","grove-3":"art/grove-3.webp","grove-4":"art/grove-4.webp","grove-5":"art/grove-5.webp"};
 /* SPARKADE, the pupils' page (the owner's look book, docs/design/sparkade/): the castle, one companion that starts as an
  * egg the teacher hatches in class and grows night by night with the Sparkles the pupil has, the class, and the next
- * learning goal. The class link and PIN use the existing signed student session. Only class, sign-in and board reads reach
- * the server. Care (pet, water, snack, walk) is a short visual reaction held in this page only; it never changes Sparkles,
- * growth, ownership or anything saved. Pictures come from SP_ART (the look book art the build embeds); a stage with no
- * picture yet is drawn as a marked stand-in, never as another companion's picture. */
+ * learning goal. The class link and PIN use the existing signed student session; without a link (sparkportal.kr/sparkade
+ * on any device) the class code and the class password open the class first, and the rest is the same. Open-class, class,
+ * sign-in and board reads reach the server, and one free write: care (pet, water, snack, walk), which the companion
+ * remembers (portalPointsStudentCare keeps the time of each care and gives back the mood). The owner's rule: care never
+ * changes Sparkles, growth, ownership or the history; the teacher makes every lasting change to Sparkles and growth.
+ * Pictures come from SP_ART (the look book art the build embeds); a stage with no picture yet is drawn as a marked
+ * stand-in, never as another companion's picture. */
 (function () {
   'use strict';
   var P = PointsCore, V = typeof SparkadeAvatar !== 'undefined' ? SparkadeAvatar : null, K = P.SPARKADE, KEY = typeof SP_KEY === 'string' ? SP_KEY : '', ART = typeof SP_ART === 'object' && SP_ART ? SP_ART : {};
   var app = document.getElementById('sp-app'), live = document.getElementById('sp-live');
-  var STORE = 'spark-points-' + KEY, WORD = P.CURRENCY.many, device = null, timings = [];
-  var S = {roster: null, board: null, pin: '', picked: null, loadedAt: 0, busy: false, request: 0, pinKeys: null, careTimer: 0, preview: '', avatarDraft: null, avatarOwner: '', avatarCodeShown: false};
+  // The saved session is kept under the class link key, whichever way the class was opened, so a session from the link
+  // and a session from the code and password are the same thing. LAST remembers the last opened class key on this device.
+  var STORE = 'spark-points-' + KEY, LAST = 'spark-points-last', CLIENT = 'spark-points-client', WORD = P.CURRENCY.many, device = null, timings = [];
+  var S = {roster: null, board: null, pin: '', picked: null, loadedAt: 0, busy: false, request: 0, pinKeys: null, careTimer: 0, preview: '', avatarDraft: null, avatarOwner: '', avatarCodeShown: false, code: ''};
 
   function h(tag, attrs) {
     var n = document.createElement(tag);
@@ -734,6 +799,21 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
     return device;
   }
   function save(value) { device = value; try { window.localStorage.setItem(STORE, JSON.stringify(value)); } catch (e) { /* The signed session still works for this visit. */ } }
+  function remember(name, value) { try { if (value) window.localStorage.setItem(name, value); else window.localStorage.removeItem(name); } catch (e) {} }
+  function recall(name) { try { return String(window.localStorage.getItem(name) || ''); } catch (e) { return ''; } }
+  /* The class this page is on: from the address, else the class last opened here with the code and password. */
+  function useKey(key) { KEY = key; STORE = 'spark-points-' + KEY; device = null; }
+  /* A class link key as the server makes them (letters and digits); the server checks the exact shape itself. */
+  function goodKey(key) { return /^[a-z][a-z0-9]{3,63}$/.test(String(key || '')); }
+  /* A random name for this device, so the server can pause this device after wrong passwords without pausing the class. */
+  function clientId() {
+    var id = recall(CLIENT);
+    if (/^[A-Za-z0-9-]{8,64}$/.test(id)) return id;
+    id = 'd';
+    for (var i = 0; i < 23; i++) id += 'abcdefghijkmnpqrstuvwxyz23456789'.charAt(Math.floor(Math.random() * 32));
+    remember(CLIENT, id);
+    return id;
+  }
   function reduceMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
   function plural(n, one, many) { return n + ' ' + (Math.abs(n) === 1 ? one : many); }
   function day(iso) { try { return new Date(iso).toLocaleDateString('en-US', {weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Seoul'}); } catch (e) { return ''; } }
@@ -766,7 +846,7 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
 
   // This transport deliberately has no staff adapter or Google identity module. The signed
   // student session belongs inside payload, not the gateway's separate staff-session field.
-  var READS = {portalPointsStudentClass: 'class-read', portalPointsStudentSignIn: 'sign-in', portalPointsStudentBoard: 'class-read'};
+  var READS = {portalPointsStudentOpenClass: 'open-class', portalPointsStudentClass: 'class-read', portalPointsStudentSignIn: 'sign-in', portalPointsStudentBoard: 'class-read', portalPointsStudentCare: 'care'};
   function run(name, payload, retry) {
     if (!READS[name]) return Promise.reject(new Error('Unavailable action'));
     var started = Date.now();
@@ -789,7 +869,7 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
     function record(status) { timings.push({category: READS[name], durationMs: Math.max(0, Date.now() - started), status: status}); if (timings.length > 60) timings.shift(); }
     return task.then(function (value) {
       record(value && value.ok ? 'ok' : 'refused');
-      if (value && value.reason === 'busy' && name !== 'portalPointsStudentSignIn' && retry.attempt < 11) {
+      if (value && value.reason === 'busy' && name !== 'portalPointsStudentSignIn' && name !== 'portalPointsStudentOpenClass' && retry.attempt < 11) {
         if (retry.request !== S.request) throw new Error('cancelled');
         var remaining = retry.deadline - Date.now();
         if (remaining <= 1) return value;
@@ -818,27 +898,85 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
   }
   function sparklesChip(n) { return h('span', {class: 'sp-chip', 'aria-label': P.sparks(n)}, h('span', {class: 'sp-chip-star', 'aria-hidden': 'true', text: '✦'}), h('span', {class: 'sp-chip-num', text: String(n)})); }
 
-  /* ---------- 1. Who are you? ---------- */
+  /* ---------- 0. Open your class (no link in the address): the class code and the class password ---------- */
   function start() {
-    if (!KEY) { problem('This link is not complete. Open the class link your teacher sent, or ask your teacher for it.'); return; }
+    if (!KEY) {
+      // The class last opened here with the code and password: straight to its castle or its names, no typing again.
+      var last = recall(LAST);
+      if (!goodKey(last)) { openClass(); return; }
+      useKey(last);
+    }
     var mine = saved();
     if (mine.session) { loadBoard(); return; }
     loadRoster();
   }
+  function openClass(note) {
+    ++S.request; S.busy = false; S.roster = null; S.board = null;
+    var msg = h('p', {class: 'sp-pin-msg sp-open-msg', role: 'status', text: note || ''});
+    var code = h('input', {id: 'sp-code', class: 'sp-field', type: 'text', inputmode: 'text', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', maxlength: '16', placeholder: 'For example 5-4CT1', value: S.code,
+      oninput: function (e) { S.code = String(e.target.value || ''); }});
+    var password = h('input', {id: 'sp-password', class: 'sp-field', type: 'password', autocomplete: 'current-password', maxlength: '24', placeholder: 'From your teacher'});
+    var button = h('button', {type: 'button', class: 'sp-btn sp-open-btn', onclick: function () { submit(); }}, 'Open my class');
+    var submit = function () {
+      if (S.busy) return;
+      var c = String(code.value || '').trim(), p = String(password.value || '').trim();
+      if (!c) { msg.textContent = 'Type your class code.'; focus(code); return; }
+      if (!p) { msg.textContent = 'Type the class password.'; focus(password); return; }
+      S.busy = true; button.disabled = true; msg.textContent = 'Opening your class…';
+      var request = ++S.request;
+      run('portalPointsStudentOpenClass', {code: c, password: p, client: clientId()}).then(function (r) {
+        if (request !== S.request) return;
+        S.busy = false; button.disabled = false;
+        if (r && r.ok && goodKey(r.key)) {
+          useKey(String(r.key)); remember(LAST, KEY);
+          S.roster = {ok: true, className: r.className, students: r.students};
+          if (saved().session) { loadBoard(); return; }
+          pickName(); return;
+        }
+        password.value = '';
+        var reason = r && r.reason;
+        if (reason === 'paused') msg.textContent = 'Too many wrong tries. Wait 15 minutes, then try again. If you are not sure of the password, ask your teacher.';
+        else if (reason === 'nopassword') msg.textContent = 'Ask your teacher for the class password.';
+        else if (reason === 'unavailable' || reason === 'busy') msg.textContent = RESTING;
+        else msg.textContent = 'That class code or password is not right. Check both, then try again.' + (r && r.triesLeft ? ' ' + plural(r.triesLeft, 'try', 'tries') + ' left.' : '');
+        focus(reason === 'mismatch' || !reason ? password : code);
+      }).catch(function () { if (request !== S.request) return; S.busy = false; button.disabled = false; msg.textContent = OFFLINE; });
+    };
+    var onEnter = function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+    code.addEventListener('keydown', onEnter); password.addEventListener('keydown', onEnter);
+    screen(top(),
+      h('section', {class: 'sp-pin sp-open'},
+        h('h1', {class: 'sp-title', text: 'Open your class'}), h('p', {class: 'sp-lead', text: 'Type your class code and the class password.'}),
+        h('div', {class: 'sp-fields'},
+          h('label', {class: 'sp-field-label', for: 'sp-code'}, h('span', {class: 'sp-field-name', text: 'Class code'}), code),
+          h('label', {class: 'sp-field-label', for: 'sp-password'}, h('span', {class: 'sp-field-name', text: 'Class password'}), password)),
+        msg, button,
+        h('p', {class: 'sp-muted sp-open-help', text: 'Your teacher gives the class the code and the password. Then you tap your name and type your own PIN.'})));
+    focus(S.code ? password : code);
+  }
+
+  /* ---------- 1. Who are you? ---------- */
   function loadRoster() {
     screen(top(), h('div', {class: 'sp-card sp-wait', role: 'status'}, h('p', {text: 'Opening your class…'})));
     var request = ++S.request;
     run('portalPointsStudentClass', {key: KEY}).then(function (r) {
       if (request !== S.request) return;
       if (r && (r.reason === 'unavailable' || r.reason === 'busy')) { problem(RESTING, loadRoster); return; }
-      if (!r || !r.ok) { problem('This class link no longer works. Ask your teacher for the new link.'); return; }
+      if (!r || !r.ok) { linkGone(); return; }
       S.roster = r; pickName();
     }).catch(function () { if (request === S.request) problem(OFFLINE, loadRoster); });
   }
+  /* The class link stopped working: from the address, say so; from the code and password, ask for them again. */
+  function linkGone() {
+    if (fromAddress()) { problem('This class link no longer works. Ask your teacher for the new link.'); return; }
+    var m = saved(); delete m.session; delete m.studentId; save(m); remember(LAST, ''); useKey('');
+    openClass('That class is not open any more. Type the class code and password again, or ask your teacher.');
+  }
+  function fromAddress() { return typeof SP_KEY === 'string' && SP_KEY !== '' && SP_KEY === KEY; }
   function pickName() {
     ++S.request; S.busy = false; S.pin = ''; clearAvatarDraft();
     var r = S.roster;
-    screen(top(),
+    screen(top(fromAddress() ? null : h('button', {type: 'button', class: 'sp-link', onclick: function () { remember(LAST, ''); useKey(''); openClass(); }}, '‹ Another class')),
       h('section', {class: 'sp-pick'}, h('h1', {class: 'sp-title', text: 'Who are you?'}), h('p', {class: 'sp-lead', text: 'Tap your name.'}),
         h('div', {class: 'sp-names'}, r.students.map(function (s, i) {
           return h('button', {type: 'button', class: 'sp-name', onclick: function () { S.picked = s; S.pin = ''; pinPad(); }},
@@ -882,7 +1020,7 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
       S.pin = '';
       var reason = r && r.reason;
       if (reason === 'paused') pinPad('Too many wrong tries. Wait 15 minutes, then try again. If you forgot your PIN, ask your teacher.');
-      else if (reason === 'link') problem('This class link no longer works. Ask your teacher for the new link.');
+      else if (reason === 'link') linkGone();
       else if (reason === 'gone') loadRoster();
       else if (reason === 'unavailable' || reason === 'busy') pinPad(RESTING);
       else pinPad('That PIN is not right. ' + (r && r.triesLeft ? plural(r.triesLeft, 'try', 'tries') + ' left.' : 'Try again.'));
@@ -953,13 +1091,13 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
     return h('section', {class: 'sp-card sp-companion' + (grewNow ? ' sp-grew' : '')},
       grewNow ? h('p', {class: 'sp-grew-line', role: 'status', text: 'Your ' + kind.name + ' reached ' + c.stageName + ' last night!'}) : null,
       h('h2', {class: 'sp-h2', text: kind.name + ' · ' + c.stageName}),
-      h('div', {class: 'sp-crow'}, h('button', {type: 'button', class: 'sp-egg-btn', 'aria-label': 'Say hi to your ' + kind.name, onclick: function () { wobble(this); care('Pet'); }}, companionArt(c.species, c.stage, 'pet')),
-        h('div', {class: 'sp-ccopy'}, stageDots(c),
+      h('div', {class: 'sp-crow'}, h('button', {type: 'button', class: 'sp-egg-btn', 'aria-label': 'Say hi to your ' + kind.name, onclick: function () { wobble(this); care('pet'); }}, companionArt(c.species, c.stage, 'pet')),
+        h('div', {class: 'sp-ccopy'}, stageDots(c), moodLine(me),
           c.growsTonight ? h('p', {class: 'sp-strong sp-tonight', text: 'Growing tonight! Tomorrow: ' + kind.stages[(c.tonightStage || c.stage + 1) - 1] + '.'})
             : next === null ? h('p', {class: 'sp-strong', text: 'Fully grown: ' + c.stageName + '!'})
               : h('p', {class: 'sp-strong', text: plural(toNext, 'more ' + P.CURRENCY.one, 'more ' + WORD) + ' to spend, then ' + kind.stages[c.stage] + '.'}),
           h('p', {class: 'sp-muted', text: 'Companions grow the night after you reach ' + K.MARKS.slice(1).join(', ') + ' ' + WORD + '. Spending can delay your next mark. Every mark you reach stays earned.'}))),
-      careRow());
+      careRow(me));
   }
   /* The five companions to meet before choosing (look book: Preview every stage before choosing). */
   function meetCompanions() {
@@ -973,10 +1111,28 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
         h('div', {class: 'sp-meet-stages'}, open.stages.map(function (name, i) { return h('span', {class: 'sp-meet-stage'}, companionArt(open.id, i + 1, 'ms' + open.id + i), h('span', {class: 'sp-meet-stage-name', text: name})); }))) : null);
   }
   function redrawMeet() { var old = app.querySelector('.sp-meet'); if (old) old.replaceWith(meetCompanions()); }
-  function careRow() {
-    return h('div', {class: 'sp-care'}, h('p', {class: 'sp-care-msg', role: 'status', text: 'Your companion is happy to see you.'}),
-      h('div', {class: 'sp-care-actions'}, ['Pet', 'Water', 'Snack', 'Walk'].map(function (action) { return h('button', {type: 'button', class: 'sp-btn sp-btn-soft', onclick: function () { care(action); }}, action); })),
-      h('p', {class: 'sp-muted', text: 'Just for fun during this visit. Care does not earn or spend ' + WORD + ', or change your companion’s growth.'}));
+  /* ---------- Care the companion remembers (PointsCore.CARE, portalPointsStudentCare) ----------
+   * The owner's rule, kept here on purpose: care never earns or spends Sparkles and never changes growth. The server keeps
+   * only when each care was last done and answers with the mood; one of each care per cooldown, and tapping sooner does
+   * nothing more than tell the pupil when the companion is ready again. */
+  var CARE = P.CARE;
+  var REACTIONS = {pet: ['♥', 'enjoyed a gentle pat.'], water: ['💧', 'had a refreshing drink.'], snack: ['🍎', 'enjoyed the snack.'], walk: ['🐾', 'took a little stroll with you.']};
+  var FULL = {pet: 'has had lots of pats', water: 'is not thirsty', snack: 'is full', walk: 'is resting'};
+  function careOf(me) { var c = me && me.care; return {last: c && c.last && typeof c.last === 'object' ? c.last : {}, cooldownSeconds: c && Number(c.cooldownSeconds) > 0 ? Number(c.cooldownSeconds) : 1200}; }
+  function moodLine(me) {
+    var c = companionOf(me), mood = me && CARE.MOODS[me.mood] ? me.mood : 'okay';
+    return c && c.state === 'pet' ? h('p', {class: 'sp-mood sp-mood-' + mood, role: 'status', text: kindOf(c.species).name + ' ' + CARE.line(mood) + '.'}) : null;
+  }
+  function wait(seconds) { return seconds < 60 ? 'a moment' : Math.ceil(seconds / 60) + ' min'; }
+  function fullText(kind, action, seconds) { return kind.name + ' ' + FULL[action] + '. ' + CARE.LABELS[action] + ' again in ' + wait(seconds) + '.'; }
+  function careRow(me) {
+    var kind = kindOf(companionOf(me).species), done = CARE.doneToday(careOf(me).last, Date.now());
+    return h('div', {class: 'sp-care'}, h('p', {class: 'sp-care-msg', role: 'status', text: 'Your ' + kind.name + ' is happy to see you.'}),
+      h('div', {class: 'sp-care-actions'}, CARE.ACTIONS.map(function (action) {
+        return h('button', {type: 'button', class: 'sp-btn sp-btn-soft sp-care-btn' + (done.indexOf(action) >= 0 ? ' sp-care-done' : ''), 'data-care': action, onclick: function () { care(action); }}, CARE.LABELS[action]);
+      })),
+      h('p', {class: 'sp-care-count', text: done.length + ' of ' + CARE.ACTIONS.length + ' cares done today.'}),
+      h('p', {class: 'sp-muted', text: 'Your ' + kind.name + ' remembers every care. Care is free: it never earns or spends ' + WORD + ', and never changes how your companion grows.'}));
   }
   function historyCard(me) {
     return h('section', {class: 'sp-card'}, h('h2', {class: 'sp-h2', text: 'My ' + WORD}),
@@ -1057,19 +1213,64 @@ var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-
         codeBox));
     refresh(); focus(app.querySelector('.sp-title'));
   }
-  /* Care: a short reaction on this page only. */
+  /* A care tap: the reaction plays at once, then the server's saved answer (the care state and the mood) replaces the guess.
+   * Sooner than the cooldown nothing is sent: the page says when the companion is ready again. Offline, the reaction still
+   * plays and a gentle note says the companion will remember next time. Nothing here touches Sparkles or growth. */
   function care(action) {
-    var reactions = {Pet: ['♥', 'Your companion enjoyed a gentle pat.'], Water: ['💧', 'A refreshing drink for your companion.'], Snack: ['🍎', 'Your companion enjoyed the snack.'], Walk: ['🐾', 'You and your companion take a little stroll.']};
     var c = S.board && companionOf(S.board.me);
-    if (!reactions[action] || !c || c.state !== 'pet') return;
-    var msg = app.querySelector('.sp-care-msg'), pet = app.querySelector('.sp-companion .sp-egg-btn'), scene = app.querySelector('.sp-castle-pet');
+    if (!REACTIONS[action] || !c || c.state !== 'pet' || !app.querySelector('.sp-care-msg')) return;
+    var me = S.board.me, kind = kindOf(c.species), state = careOf(me), left = CARE.cooldown(state.last, action, Date.now(), state.cooldownSeconds);
+    if (left > 0) { careNote(fullText(kind, action, left), 4000); return; }
+    reaction(action, kind);
+    var session = saved().session, request = S.request, who = me.studentId;
+    if (!session) { careNote(kind.name + ' will remember it next time, once you are signed in.', 4000); return; }
+    run('portalPointsStudentCare', {session: session, action: action}).then(function (r) {
+      if (request !== S.request || !S.board || S.board.me.studentId !== who) return;
+      if (r && r.ok) { applyCare(r); if (r.allToday) celebrate(kind); }
+      else if (r && r.reason === 'cooldown') { applyCare(r); careNote(fullText(kind, action, Number(r.cooldown) || 0), 4000); }
+      else if (r && (r.reason === 'busy' || r.reason === 'unavailable')) careNote(kind.name + ' will remember it next time. SPARKADE is busy right now.', 4000);
+      // 'signin' or 'companion': the next refresh shows what changed (a new PIN, or the egg); nothing to say here.
+    }).catch(function () { if (request === S.request) careNote(kind.name + ' will remember it next time you are connected.', 4000); });
+  }
+  function reaction(action, kind) {
+    var msg = app.querySelector('.sp-care-msg'), pet = app.querySelector('.sp-companion .sp-egg-btn'), scene = app.querySelector('.sp-castle-pet'), text = kind.name + ' ' + REACTIONS[action][1];
+    if (S.careTimer) clearTimeout(S.careTimer);
+    msg.textContent = text; say(text);
+    var tag = h('span', {class: 'sp-care-reaction', 'aria-hidden': 'true', text: REACTIONS[action][0]});
+    if (pet) { pet.querySelectorAll('.sp-care-reaction').forEach(function (x) { x.remove(); }); pet.append(tag); if (action !== 'pet') wobble(pet); }
+    if (scene) { scene.classList.remove('sp-care-walk'); if (action === 'walk' && !reduceMotion()) scene.classList.add('sp-care-walk'); }
+    S.careTimer = setTimeout(function () { S.careTimer = 0; if (tag.isConnected) tag.remove(); if (scene) scene.classList.remove('sp-care-walk'); if (msg.isConnected) msg.textContent = 'Your ' + kind.name + ' is happy to see you.'; }, 2200);
+  }
+  function careNote(text, hold) {
+    var msg = app.querySelector('.sp-care-msg'), c = S.board && companionOf(S.board.me);
     if (!msg) return;
     if (S.careTimer) clearTimeout(S.careTimer);
-    msg.textContent = reactions[action][1]; say(reactions[action][1]);
-    var tag = h('span', {class: 'sp-care-reaction', 'aria-hidden': 'true', text: reactions[action][0]});
-    if (pet) { pet.querySelectorAll('.sp-care-reaction').forEach(function (x) { x.remove(); }); pet.append(tag); if (action !== 'Pet') wobble(pet); }
-    if (scene) { scene.classList.remove('sp-care-walk'); if (action === 'Walk' && !reduceMotion()) scene.classList.add('sp-care-walk'); }
-    S.careTimer = setTimeout(function () { S.careTimer = 0; if (tag.isConnected) tag.remove(); if (scene) scene.classList.remove('sp-care-walk'); if (msg.isConnected) msg.textContent = 'Your companion is happy to see you.'; }, 2200);
+    msg.textContent = text; say(text);
+    S.careTimer = setTimeout(function () { S.careTimer = 0; if (msg.isConnected && c) msg.textContent = 'Your ' + kindOf(c.species).name + ' is happy to see you.'; }, hold || 2200);
+  }
+  /* The saved answer: the care state and the mood on the board in memory, the mood line, the buttons done today. */
+  function applyCare(r) {
+    var me = S.board.me;
+    if (r.care && typeof r.care === 'object') me.care = r.care;
+    if (CARE.MOODS[r.mood]) me.mood = r.mood;
+    var line = app.querySelector('.sp-mood'), fresh = moodLine(me);
+    if (line && fresh) line.replaceWith(fresh);
+    var done = CARE.doneToday(careOf(me).last, Date.now()), count = app.querySelector('.sp-care-count');
+    app.querySelectorAll('.sp-care-btn').forEach(function (b) { b.classList.toggle('sp-care-done', done.indexOf(b.getAttribute('data-care')) >= 0); });
+    if (count) count.textContent = done.length + ' of ' + CARE.ACTIONS.length + ' cares done today.';
+  }
+  /* One short moment the first time all four cares are done in a day, remembered on this device so it is not repeated. */
+  function celebrate(kind) {
+    var mine = saved(), me = S.board.me, today = CARE.day(Date.now()), row = app.querySelector('.sp-care'), card = app.querySelector('.sp-companion');
+    if (mine.careDay && mine.careDay.studentId === me.studentId && mine.careDay.day === today) return;
+    mine.careDay = {studentId: me.studentId, day: today}; save(mine);
+    if (!row) return;
+    var text = 'All four cares done today! ' + kind.name + ' is glowing.', line = h('p', {class: 'sp-care-all', role: 'status', text: text});
+    row.querySelectorAll('.sp-care-all').forEach(function (x) { x.remove(); });
+    row.prepend(line); say(text);
+    if (card && !reduceMotion()) { card.classList.remove('sp-care-glow'); void card.offsetWidth; card.classList.add('sp-care-glow'); }
+    wobble(app.querySelector('.sp-companion .sp-egg-btn'));
+    setTimeout(function () { if (line.isConnected) line.remove(); if (card) card.classList.remove('sp-care-glow'); }, 6000);
   }
   function signOut() { ++S.request; S.busy = false; clearAvatarDraft(); var m = saved(); delete m.session; delete m.studentId; save(m); S.board = null; loadRoster(); }
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && S.board && !S.busy && Date.now() - S.loadedAt > 60000 && app.querySelector('.sp-castle')) loadBoard(); });

@@ -1507,6 +1507,9 @@ details.cl-card[open]>summary::before{transform:rotate(45deg)}
 /* SPARKADE: the companion on a card, the side panel, the choose-an-egg window */
 .pts-card-pet{display:inline-block;max-width:100%;margin-top:4px;padding:3px 9px;border-radius:12px;background:#eef4ff;color:#2b4c8a;font-size:11.5px;font-weight:750;line-height:1.3;text-wrap:balance}
 .pts-card-egg{background:#fff4d6;color:#6a4d05}
+.pts-card-mood{font-weight:600;color:#53686d}
+.pts-mood-great{color:#1f7a4d}
+.pts-mood-missing{color:#a0582b}
 .pts-sparkade{display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--sp-panel,#fff);border:1px solid var(--sp-border,#dce6e6);border-radius:var(--sp-radius,14px)}
 .pts-sparkade h2{margin:0;font-size:16px;color:var(--sp-ink,#173640)}
 .pts-sk-group{display:flex;flex-direction:column;gap:6px}
@@ -8290,7 +8293,49 @@ var PointsCore = (function () {
     return { COMPANIONS: COMPANIONS, EGG_MARK: EGG_MARK, MARKS: MARKS, companion: companion, stageFor: stageFor, nextMark: nextMark, growth: growth, record: record, parse: parse, midnightAfter: midnightAfter };
   })();
 
-  return { SPARKADE: SPARKADE, islandFor: islandFor, ISLAND_STAGES: ISLAND_STAGES, LEVELS: LEVELS, AFTER_TEN: AFTER_TEN, STAGE_NAMES: STAGE_NAMES, SPECIES: SPECIES, COLOURS: COLOURS, ICONS: ICONS,
+  /* ---------- Care from home (pet, water, snack, walk) and the mood it gives ----------
+   * The owner's rule: care is free. It never awards or spends Sparkles and never changes a companion's growth; the only
+   * thing it changes is when each care last happened, and the mood read from those times. One rule here, so the pupil's
+   * page, the teacher's board and the server say the same mood for the same care. Days are Seoul days. */
+  var CARE = (function () {
+    var ACTIONS = ['pet', 'water', 'snack', 'walk'], FEED = ['water', 'snack'], PLAY = ['pet', 'walk'], SEOUL = 9 * 3600000, DAY = 86400000;
+    var MOODS = { great: 'feels great', okay: 'is doing okay', missing: 'is missing you' };
+    var LABELS = { pet: 'Pet', water: 'Water', snack: 'Snack', walk: 'Walk' };
+    function valid(action) { return ACTIONS.indexOf(String(action || '')) >= 0; }
+    function day(ms) { return new Date(Number(ms) + SEOUL).toISOString().slice(0, 10); }
+    /* The last care times as ms, 0 for none or junk, never in the future. */
+    function times(last, nowMs) {
+      var now = Number(nowMs) || Date.now(), out = {};
+      ACTIONS.forEach(function (a) { var v = last && last[a], t = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? Date.parse(v) : NaN; out[a] = isFinite(t) && t <= now ? t : 0; });
+      return out;
+    }
+    /* The cares done today (Seoul), in ACTIONS order. */
+    function doneToday(last, nowMs) {
+      var now = Number(nowMs) || Date.now(), t = times(last, now), today = day(now);
+      return ACTIONS.filter(function (a) { return t[a] && day(t[a]) === today; });
+    }
+    function allToday(last, nowMs) { return doneToday(last, nowMs).length === ACTIONS.length; }
+    /* great: fed (water or snack) and played with (pet or walk) today; missing: no care for two days; okay: the rest,
+     * including a companion never cared for yet (it does not start out missing anyone). */
+    function mood(last, nowMs) {
+      var now = Number(nowMs) || Date.now(), done = doneToday(last, now), t = times(last, now), latest = 0;
+      ACTIONS.forEach(function (a) { if (t[a] > latest) latest = t[a]; });
+      var fed = done.some(function (a) { return FEED.indexOf(a) >= 0; }), played = done.some(function (a) { return PLAY.indexOf(a) >= 0; });
+      if (fed && played) return 'great';
+      if (latest && now - latest >= 2 * DAY) return 'missing';
+      return 'okay';
+    }
+    function line(m) { return MOODS[m] || MOODS.okay; }
+    /* Seconds before this care can be done again (0 when it can be done now). */
+    function cooldown(last, action, nowMs, seconds) {
+      var now = Number(nowMs) || Date.now(), t = times(last, now)[action] || 0, wait = Math.max(0, Number(seconds) || 0) * 1000;
+      if (!t || !wait) return 0;
+      return Math.max(0, Math.ceil((t + wait - now) / 1000));
+    }
+    return { ACTIONS: ACTIONS, FEED: FEED, PLAY: PLAY, MOODS: MOODS, LABELS: LABELS, valid: valid, day: day, times: times, doneToday: doneToday, allToday: allToday, mood: mood, line: line, cooldown: cooldown };
+  })();
+
+  return { SPARKADE: SPARKADE, CARE: CARE, islandFor: islandFor, ISLAND_STAGES: ISLAND_STAGES, LEVELS: LEVELS, AFTER_TEN: AFTER_TEN, STAGE_NAMES: STAGE_NAMES, SPECIES: SPECIES, COLOURS: COLOURS, ICONS: ICONS,
     levelFor: levelFor, stageFor: stageFor, totals: totals, goalProgress: goalProgress, creatureParts: creatureParts, validCreature: validCreature,
     creatureFor: creatureFor, speciesName: speciesName, creatureSvg: creatureSvg, jarSvg: jarSvg, JAR_SLOTS: JAR_SLOTS.length, cleanName: cleanName, shortNames: shortNames, byName: byName,
     signed: signed, validIcon: validIcon, defaultBehaviours: defaultBehaviours, isExampleSet: isExampleSet, CURRENCY: CURRENCY, IDEAS: IDEAS, word: word, sparks: sparks };
@@ -8391,16 +8436,26 @@ var PointsAvatar = (function () {
   function rewardsFor(level) { return CATALOG.filter(function (x) { return x.reward && Number(level) >= x.reward; }).map(function (x) { return x.id; }); }
   function freeItems() { return CATALOG.filter(function (x) { return x.free; }).map(function (x) { return x.id; }); }
 
-  /* ---------- care: Food and Fun, kept as "food,fun,time,day of the last Say hi" ---------- */
+  /* ---------- care: Food and Fun, kept as "food,fun,time,day of the last Say hi,pet,water,snack,walk" ----------
+   * The last four parts (added 30 October 2026) are when the pupil last did each care from home (PointsCore.CARE), as ISO
+   * times or empty; a cell written before them reads as never cared. They give the mood; they never touch the meters. */
+  function careLast(parts) {
+    var out = {};
+    PC.CARE.ACTIONS.forEach(function (a, i) { var v = String(parts[4 + i] || ''); out[a] = /^\d{4}-\d{2}-\d{2}T/.test(v) && isFinite(Date.parse(v)) ? new Date(Date.parse(v)).toISOString() : ''; });
+    return out;
+  }
   function careNow(text, nowMs) {
-    var parts = String(text == null ? '' : text).split(','), at = Date.parse(parts[2] || ''), now = Number(nowMs) || Date.now();
+    var parts = String(text == null ? '' : text).split(','), at = Date.parse(parts[2] || ''), now = Number(nowMs) || Date.now(), last = careLast(parts);
     var food = Number(parts[0]), fun = Number(parts[1]);
-    if (!(isFinite(food) && isFinite(fun) && isFinite(at))) return { food: CARE.start, fun: CARE.start, at: now, hi: String(parts[3] || '') };
+    if (!(isFinite(food) && isFinite(fun) && isFinite(at))) return { food: CARE.start, fun: CARE.start, at: now, hi: String(parts[3] || ''), last: last };
     var gone = Math.max(0, now - at) / 86400000 * CARE.perDay;
     var clamp = function (v) { return Math.max(0, Math.min(CARE.max, Math.round(v))); };
-    return { food: clamp(food - gone), fun: clamp(fun - gone), at: now, hi: /^\d{4}-\d{2}-\d{2}$/.test(parts[3] || '') ? parts[3] : '' };
+    return { food: clamp(food - gone), fun: clamp(fun - gone), at: now, hi: /^\d{4}-\d{2}-\d{2}$/.test(parts[3] || '') ? parts[3] : '', last: last };
   }
-  function careText(c) { return [Math.round(c.food), Math.round(c.fun), new Date(c.at).toISOString(), c.hi || ''].join(','); }
+  function careText(c) {
+    var last = c.last || {};
+    return [Math.round(c.food), Math.round(c.fun), new Date(c.at).toISOString(), c.hi || ''].concat(PC.CARE.ACTIONS.map(function (a) { return last[a] || ''; })).join(',');
+  }
   function mood(c) { var avg = (c.food + c.fun) / 2; return avg >= 70 ? 'great' : avg >= 35 ? 'ok' : 'tired'; }
 
   /* ---------- looks ---------- */
@@ -8773,7 +8828,7 @@ var PointsAvatar = (function () {
     opts = opts || {};
     var look = parse(opts.look) || parse(startFor(opts.uid || 'x')), g = geometry(look), skin = SKIN[look.skin], hair = HAIR[look.hairColour];
     var wear = parseWear(opts.wear) || {}, pose = opts.pose === 'cheer' ? 'cheer' : 'stand', uid = String(opts.uid || 'a').replace(/[^A-Za-z0-9_-]/g, '');
-    var top = look.top, label = esc(opts.label), tier = Math.max(0, Math.min(5, Math.floor(Number(opts.tier) || 0))), moodName = opts.mood === 'great' || opts.mood === 'tired' ? opts.mood : 'ok';
+    var top = look.top, label = esc(opts.label), tier = Math.max(0, Math.min(5, Math.floor(Number(opts.tier) || 0))), moodName = opts.mood === 'great' ? 'great' : opts.mood === 'tired' || opts.mood === 'missing' ? 'tired' : 'ok';
     var box = '0 0 120 160';
     if (opts.fit === 'head') box = n(60 - 37) + ' ' + n(g.cy - g.r - 17) + ' 74 74';
     else if (opts.fit) { var y0 = 22; if (wear.head) y0 = Math.min(y0, g.cy - g.r - (wear.head === 'wizard' ? 46 : wear.head === 'partyhat' ? 34 : wear.head === 'legendcrown' ? 28 : 22)); if (wear.hand === 'balloon' && pose === 'stand') y0 = Math.min(y0, g.shoulder - 50); if (wear.back === 'wings') y0 = Math.min(y0, g.shoulder - 24); y0 = Math.max(0, y0); box = '0 ' + n(y0) + ' 120 ' + n(160 - y0); }
@@ -9162,7 +9217,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     function clsOut(c) {
       const t = P.totals(list(c.classId)), batches = {}, order = [];
       M.awards.filter(a => a.classId === c.classId).forEach(a => { let b = batches[a.batchId]; if (!b) { b = batches[a.batchId] = { batchId: a.batchId, at: a.at, label: a.label, icon: a.icon, points: a.points, studentIds: [], undone: a.undone }; order.push(a.batchId); } b.studentIds.push(a.studentId); });
-      return { classId: c.classId, code: c.code, name: c.name, linkKey: '', link: '', goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) },
+      return { classId: c.classId, code: c.code, name: c.name, linkKey: '', link: '', password: c.password || '', goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) },
         students: M.students.filter(s => s.classId === c.classId).sort((a, b) => a.order - b.order).map(s => ({ studentId: s.studentId, name: s.name, pin: s.pin, creature: s.creature, active: s.active, order: s.order, points: (t[s.studentId] || {}).points || 0, peak: (t[s.studentId] || {}).peak || 0, balance: (t[s.studentId] || {}).points || 0, look: s.look || A.startFor(s.studentId), avatarV2: s.avatarV2 || null, wear: s.wear || '', pet: s.pet || null, spent: 0, made: false, things: 0, companion: companionOut(s) })),
         recent: order.slice(-30).reverse().map(id => batches[id]), buys: [], quests: (M.quests || []).filter(q => q.classId === c.classId && q.active), claims: [] };
     }
@@ -9172,7 +9227,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     return {
       data(classId) { load(); const active = M.classes.filter(c => c.active); const c = classId ? cls(classId) : active[0]; return later({ ok: true, ready: true, url: '', classes: active.map(x => ({ classId: x.classId, code: x.code, name: x.name, students: M.students.filter(s => s.classId === x.classId && s.active).length })), shop: M.shop, behaviours: M.behaviours.slice().sort((a, b) => a.order - b.order), cls: c ? clsOut(c) : null }); },
       setup() { load(); return later({ ok: true, created: false, url: '' }); },
-      saveClass(p) { load(); const code = String(p.code || '').trim(); if (!/^[0-9A-Za-z][0-9A-Za-z -]{0,15}$/.test(code)) return Promise.reject(new Error('Type the class code, for example 5-4CT1.')); let c = p.classId ? cls(p.classId) : null; if (M.classes.some(x => x !== c && x.active && x.code.toLowerCase() === code.toLowerCase())) return Promise.reject(new Error(code + ' is already in Points.')); if (!c) { c = { classId: newId(), code, name: p.name || '', linkKey: '', goalName: p.goalName || 'Class party', goalTarget: Number(p.goalTarget) >= 5 ? Number(p.goalTarget) : 300, goalStart: new Date().toISOString(), active: true }; M.classes.push(c); } else { c.code = code; c.name = p.name || ''; if (p.archive === true) c.active = false; } save(); return later({ ok: true, classId: c.classId }); },
+      saveClass(p) { load(); const code = String(p.code || '').trim(); if (!/^[0-9A-Za-z][0-9A-Za-z -]{0,15}$/.test(code)) return Promise.reject(new Error('Type the class code, for example 5-4CT1.')); let c = p.classId ? cls(p.classId) : null; if (M.classes.some(x => x !== c && x.active && x.code.toLowerCase() === code.toLowerCase())) return Promise.reject(new Error(code + ' is already in Points.')); const password = p.password === undefined || p.password === null ? undefined : String(p.password).trim(); if (password !== undefined && password !== '' && !(password.length >= 6 && password.length <= 24)) return Promise.reject(new Error('The class password needs 6 to 24 characters.')); if (!c) { c = { classId: newId(), code, name: p.name || '', linkKey: '', password: password || '', goalName: p.goalName || 'Class party', goalTarget: Number(p.goalTarget) >= 5 ? Number(p.goalTarget) : 300, goalStart: new Date().toISOString(), active: true }; M.classes.push(c); } else { c.code = code; c.name = p.name || ''; if (password !== undefined) c.password = password; if (p.archive === true) c.active = false; } save(); return later({ ok: true, classId: c.classId }); },
       newGoal(p) { load(); const c = cls(p.classId), t = Math.floor(Number(p.goalTarget)); if (!String(p.goalName || '').trim()) return Promise.reject(new Error('Name the prize, for example Movie day.')); if (!(t >= 5 && t <= 100000)) return Promise.reject(new Error('The class goal needs a number of points from 5 to 100000.')); c.goalName = String(p.goalName).trim().slice(0, 40); c.goalTarget = t; c.goalStart = new Date().toISOString(); save(); return later({ ok: true, goal: { name: c.goalName, target: t, start: c.goalStart, progress: 0 } }); },
       saveStudents(p) { load(); const c = cls(p.classId), mine = M.students.filter(s => s.classId === c.classId), taken = new Set(mine.map(s => s.pin)); let added = 0;
         const fresh = new Set();
@@ -9325,9 +9380,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       h('span', { class: 'pts-card-level' }, h('span', {class: 'pts-card-progress', text: progress.text}), h('span', { class: 'pts-bar', 'aria-hidden': 'true' }, h('span', { style: 'width:' + Math.round(progress.progress * 100) + '%' }))),
       h('span', {class: 'pts-companion-slot'}, companionLine(s)));
   }
+  /* The companion and, once hatched, its mood: the server reads it from the care the pupil did from home (PointsCore.CARE),
+   * the same rule the pupil's page shows. Care is the pupil's own free thing; nothing here changes it. */
   function companionLine(s) {
     const c = s.companion; if (!c || !K.companion(c.species)) return null;
-    return h('span', { class: 'pts-card-pet' + (c.state === 'egg' ? ' pts-card-egg' : ''), text: c.state === 'egg' ? '🥚 ' + c.name + ' egg' : '✦ ' + c.name + ' · ' + c.stageName });
+    const mood = c.state === 'pet' && P.CARE.MOODS[s.mood] ? h('span', { class: 'pts-card-mood pts-mood-' + s.mood, text: ' · ' + P.CARE.line(s.mood).replace(/^(is|feels) /, '') }) : null;
+    return h('span', { class: 'pts-card-pet' + (c.state === 'egg' ? ' pts-card-egg' : ''), text: c.state === 'egg' ? '🥚 ' + c.name + ' egg' : '✦ ' + c.name + ' · ' + c.stageName }, mood);
   }
   /* Spendable wallet, including awards still being confirmed. Existing purchases stay deducted. */
   function balanceOf(s, totals) { const t = totals[s.studentId] || { points: s.points }; return t.points - (Number(s.spent) || 0); }
@@ -9486,18 +9544,23 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     }
   }
 
-  /* Pupils (or the whole class link) paused after wrong PINs, with the way to let them in again at once. */
-  function paused(c) { return c && c.pauses ? c.pauses : { cls: false, students: [] }; }
+  /* Pupils (or the whole class link) paused after wrong PINs, and the class code paused after wrong passwords, with the way
+   * to let them in again at once. The two pauses are separate: wrong passwords at the code never pause PIN sign-in. */
+  function paused(c) { const p = c && c.pauses ? c.pauses : {}; return { cls: !!p.cls, code: !!p.code, students: p.students || [] }; }
   function pauseNotice(c) {
     const p = paused(c), names = c.students.filter(s => p.students.indexOf(s.studentId) >= 0).map(s => s.name);
-    if (!p.cls && !names.length) return null;
-    const msg = h('span', { text: p.cls ? 'Signing in on the class link is paused for 15 minutes after too many wrong PINs.' : names.join(', ') + (names.length === 1 ? ' is' : ' are') + ' paused for 15 minutes after wrong PINs.' });
+    if (!p.cls && !p.code && !names.length) return null;
+    const parts = [];
+    if (p.cls) parts.push('Signing in on the class link is paused for 15 minutes after too many wrong PINs.');
+    else if (names.length) parts.push(names.join(', ') + (names.length === 1 ? ' is' : ' are') + ' paused for 15 minutes after wrong PINs.');
+    if (p.code) parts.push('Opening the class with its code and password is paused for 15 minutes after too many wrong passwords.' + (p.cls || names.length ? '' : ' Pupils with the link still sign in.'));
+    const msg = h('span', { text: parts.join(' ') });
     const box = h('div', { class: 'pts-pause', role: 'status' }, msg);
     const lift = h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => {
       lift.disabled = true; msg.textContent = 'Letting them sign in again…';
-      Promise.resolve(call('clearPauses', { classId: c.classId })).then(() => { c.pauses = { cls: false, students: [] }; box.remove(); if (S.ui) S.ui.live.textContent = 'Pupils can sign in again.'; })
+      Promise.resolve(call('clearPauses', { classId: c.classId })).then(() => { c.pauses = { cls: false, code: false, students: [] }; box.remove(); if (S.ui) S.ui.live.textContent = 'Pupils can sign in again.'; })
         .catch(e => { lift.disabled = false; msg.textContent = String(e.message || e); });
-    } }, 'Let them sign in now');
+    } }, p.code && !p.cls && !names.length ? 'Open the class code now' : 'Let them sign in now');
     box.append(lift);
     return box;
   }
@@ -9876,6 +9939,21 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       S.confirm = null; msg.textContent = 'Making a new link…'; Promise.resolve(call('newLink', { classId: c.classId })).then(r => { c.link = r.link; c.linkKey = r.linkKey; linkBox.value = r.link; copy.disabled = !r.link; renew.textContent = 'Make a new link'; msg.textContent = 'New link made. The old one no longer works.'; }).catch(e => { msg.textContent = String(e.message || e); });
     } }, 'Make a new link');
     const slips = h('button', { type: 'button', class: 'cp-secondary', onclick: () => pinSlips(c) }, 'PIN slips to print');
+    // The class code and the class password: what pupils type at sparkportal.kr/sparkade when they have no link.
+    const codeBox = h('input', { id: 'pts-class-code', type: 'text', readonly: true, value: c.code });
+    const passwordBox = h('input', { id: 'pts-class-password', type: 'text', maxlength: '24', autocomplete: 'off', spellcheck: 'false', placeholder: '6 to 24 characters', value: c.password || '' });
+    const shownPassword = h('span', { class: 'pts-pin', title: 'Class password' }, c.password ? 'Password ' + c.password : 'No password yet');
+    const savePassword = h('button', { type: 'button', class: 'cp-secondary', onclick: () => {
+      const value = String(passwordBox.value || '').trim();
+      if (value && (value.length < 6 || value.length > 24)) { msg.textContent = 'The class password needs 6 to 24 characters.'; focusQuietly(passwordBox); return; }
+      const had = !!c.password, changed = had && value !== c.password;
+      savePassword.disabled = true; msg.textContent = value ? 'Saving the class password…' : 'Taking the class password away…';
+      Promise.resolve(call('saveClass', { classId: c.classId, code: c.code, name: c.name || '', password: value }))
+        .then(() => { c.password = value; passwordBox.value = value; shownPassword.textContent = value ? 'Password ' + value : 'No password yet'; savePassword.disabled = false;
+          // Opening with the password hands out the class link, which this save keeps: say so, and where to shut earlier holders out.
+          msg.textContent = (value ? 'Class password saved. Pupils type ' + c.code + ' and this password at sparkportal.kr/sparkade.' : 'Class password taken away. Pupils can only open the class with the link now.') + (changed ? ' Anyone who already opened the class with the old password keeps it until you press Make a new link.' : ''); })
+        .catch(e => { savePassword.disabled = false; msg.textContent = String(e.message || e); });
+    } }, 'Save password');
     ui.body.append(
       h('div', { class: 'pts-bar-top' }, h('button', { type: 'button', class: 'cp-secondary', onclick: () => { S.view = 'board'; render(); } }, 'Back to the board'), h('h2', { class: 'pts-setup-title', text: 'Set up ' + (c.name || c.code) })),
       ...[pauseNotice(c)].filter(Boolean),
@@ -9884,6 +9962,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
           h('p', { class: 'pts-help', text: 'Pupils see first names only (with an initial when two share a name). Pupils preview their own SPARKADE avatar at home. Apply their design in class.' }),
           table, h('label', { class: 'cl-field', for: 'pts-paste' }, h('span', { text: c.students.length ? 'New pupils: one name per line, then Save class list' : 'Pupils’ names: one per line, then Save class list' }), paste),
           h('div', { class: 'cp-actions' }, saveBtn, fill)),
+        h('section', { class: 'pts-panel pts-classcode' }, h('h3', { text: 'Class code and password' }),
+          h('p', { class: 'pts-help', text: 'Pupils type the class code and this password at sparkportal.kr/sparkade on any device, then tap their name and type their own PIN. The link below still works too.' }),
+          h('p', { class: 'pts-help', text: 'The password opens the same class link. Changing or taking away the password does not shut out anyone who already opened the class with it: press Make a new link for that.' }),
+          h('div', { class: 'pts-inline' }, h('label', { class: 'cl-field', for: 'pts-class-code' }, h('span', { text: 'Class code' }), codeBox), h('label', { class: 'cl-field', for: 'pts-class-password' }, h('span', { text: 'Class password' }), passwordBox), savePassword),
+          h('p', { class: 'pts-help' }, shownPassword)),
         h('section', { class: 'pts-panel' }, h('h3', { text: 'The class link' }),
           h('p', { class: 'pts-help', text: 'Pupils open this link at home, tap their name and type their PIN. They see classmates’ avatars and ' + P.CURRENCY.many + ' in name order, their companion, and their own history.' }),
           h('label', { class: 'cl-field', for: 'pts-link' }, h('span', { text: 'Link for ' + (c.name || c.code) }), linkBox), h('div', { class: 'cp-actions' }, copy, slips, renew)),
