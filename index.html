@@ -1787,6 +1787,23 @@ details.cl-card[open]>summary::before{transform:rotate(45deg)}
 @keyframes pa-water{to{stroke-dashoffset:-34}}
 @media(prefers-reduced-motion:reduce){.pa-figure-breathe,.pa-pet-breathe,.pa-blink,.pa-island-float,.pa-windmill,.pa-smoke,.pa-waterfall path{animation:none!important}.pa-smoke{opacity:.4}}
 
+/* Pupil screen dialog (what pupils see in the shared courtyard) */
+.pts-screen-dialog{width:min(100%,640px)}
+.pts-screen-form{display:flex;flex-direction:column;gap:14px}
+.pts-screen-block{display:flex;flex-direction:column;gap:8px}
+.pts-screen-bannerhead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pts-screen-switch{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--sp-ink,#173640)}
+#cp-root .pts-switch{min-width:64px;min-height:36px;padding:4px 14px;border-radius:999px;border:2px solid var(--sp-control,#7b897e);background:var(--sp-panel-alt,#eef4f2);color:var(--sp-ink,#173640);font-weight:800;font-size:14px;cursor:pointer}
+#cp-root .pts-switch.pts-switch-on{background:#1d6f4b;border-color:#1d6f4b;color:#fff}
+.pts-screen-dialog textarea{width:100%;box-sizing:border-box;resize:vertical;font:inherit;font-size:16px;line-height:1.5;padding:9px 11px;border:1px solid var(--sp-control,#7b897e);border-radius:var(--sp-control-radius,8px);background:var(--sp-panel,#fff);color:var(--sp-ink,#173640)}
+.pts-screen-dialog select{min-width:0;width:100%;box-sizing:border-box;font-size:16px;padding:9px 11px;border:1px solid var(--sp-control,#7b897e);border-radius:var(--sp-control-radius,8px);background:var(--sp-panel,#fff);color:var(--sp-ink,#173640)}
+.pts-screen-dialog .cl-field>span{color:var(--sp-ink,#173640)}
+.pts-screen-meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pts-screen-count{flex:none;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pts-screen-row{display:flex;flex-direction:column;gap:2px}
+.pts-screen-row .pts-check{white-space:normal;font-size:15px;font-weight:650}
+.pts-screen-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:520px){.pts-screen-pair{grid-template-columns:1fr}.pts-screen-bannerhead{flex-wrap:wrap}}
 
 </style>
 <style id="cpg-styles">
@@ -9189,6 +9206,47 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     if (CONF.parts.length && left > 0) CONF.frame = requestAnimationFrame(step); else { ctx.clearRect(0, 0, CONF.w, CONF.h); CONF.parts = []; CONF.frame = 0; }
   }
 
+  /* ---------- the pupil screen: what pupils see in the shared courtyard ----------
+   * The teacher chooses the banner, whether Sparkles show under names, the class crest, the sky and weather, care at home and
+   * the sound default. The server keeps one JSON cell per class (portalPointsSaveScreen) and every pupil's courtyard carries it. */
+  const SKIES = [['auto', 'Auto'], ['dawn', 'Dawn'], ['day', 'Day'], ['golden', 'Golden hour'], ['night', 'Night']];
+  const WEATHERS = [['auto', 'Auto'], ['clear', 'Clear'], ['rain', 'Rain'], ['snow', 'Snow']];
+  const MAX_BANNER = 160;
+  function screenDefaults() { return { banner: { text: '', on: false }, sparkles: true, crest: true, sky: 'auto', weather: 'auto', care: true, sound: true }; }
+  /* The class's settings as the page uses them: the server's, with the defaults for anything an older reply leaves out. */
+  function screenOf(c) {
+    const out = screenDefaults(), s = c && c.screen;
+    if (!s || typeof s !== 'object') return out;
+    if (s.banner && typeof s.banner === 'object') { if (typeof s.banner.text === 'string') out.banner.text = s.banner.text; if (typeof s.banner.on === 'boolean') out.banner.on = s.banner.on; }
+    ['sparkles', 'crest', 'care', 'sound'].forEach(k => { if (typeof s[k] === 'boolean') out[k] = s[k]; });
+    if (SKIES.some(x => x[0] === s.sky)) out.sky = s.sky;
+    if (WEATHERS.some(x => x[0] === s.weather)) out.weather = s.weather;
+    return out;
+  }
+  /* The same checks as the server's, so the browser sample refuses what the real portal refuses. Returns the cleaned settings or throws. */
+  function cleanScreen(input, base) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('The pupil screen settings are missing.');
+    const known = ['banner', 'sparkles', 'crest', 'sky', 'weather', 'care', 'sound'], out = { banner: { text: base.banner.text, on: base.banner.on }, sparkles: base.sparkles, crest: base.crest, sky: base.sky, weather: base.weather, care: base.care, sound: base.sound };
+    Object.keys(input).forEach(k => { if (known.indexOf(k) < 0) throw new Error('The pupil screen has a setting that is not known.'); });
+    if (input.banner !== undefined) {
+      const b = input.banner;
+      if (!b || typeof b !== 'object' || Array.isArray(b)) throw new Error('The banner needs its text and an on/off choice.');
+      if (b.text !== undefined) {
+        if (typeof b.text !== 'string') throw new Error('The banner text must be words.');
+        const text = b.text.trim();
+        if (/[<>]/.test(text)) throw new Error('The banner cannot contain < or >.');
+        if (/[\u0000-\u001f\u007f]/.test(text)) throw new Error('The banner is one line: no line breaks.');
+        if (text.length > MAX_BANNER) throw new Error('The banner can be up to ' + MAX_BANNER + ' characters.');
+        out.banner.text = text;
+      }
+      if (b.on !== undefined) { if (typeof b.on !== 'boolean') throw new Error('The banner is either on or off.'); out.banner.on = b.on; }
+    }
+    ['sparkles', 'crest', 'care', 'sound'].forEach(k => { if (input[k] === undefined) return; if (typeof input[k] !== 'boolean') throw new Error('Each choice is either on or off.'); out[k] = input[k]; });
+    if (input.sky !== undefined) { if (!SKIES.some(x => x[0] === input.sky)) throw new Error('Choose the sky from Auto, Dawn, Day, Golden hour or Night.'); out.sky = input.sky; }
+    if (input.weather !== undefined) { if (!WEATHERS.some(x => x[0] === input.weather)) throw new Error('Choose the weather from Auto, Clear, Rain or Snow.'); out.weather = input.weather; }
+    return out;
+  }
+
   /* ---------- the sample (this browser only; invented pupils) ---------- */
   const sample = (function () {
     let M = null;
@@ -9217,7 +9275,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     function clsOut(c) {
       const t = P.totals(list(c.classId)), batches = {}, order = [];
       M.awards.filter(a => a.classId === c.classId).forEach(a => { let b = batches[a.batchId]; if (!b) { b = batches[a.batchId] = { batchId: a.batchId, at: a.at, label: a.label, icon: a.icon, points: a.points, studentIds: [], undone: a.undone }; order.push(a.batchId); } b.studentIds.push(a.studentId); });
-      return { classId: c.classId, code: c.code, name: c.name, linkKey: '', link: '', password: c.password || '', goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) },
+      return { classId: c.classId, code: c.code, name: c.name, linkKey: '', link: '', password: c.password || '', screen: screenOf(c), goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) },
         students: M.students.filter(s => s.classId === c.classId).sort((a, b) => a.order - b.order).map(s => ({ studentId: s.studentId, name: s.name, pin: s.pin, creature: s.creature, active: s.active, order: s.order, points: (t[s.studentId] || {}).points || 0, peak: (t[s.studentId] || {}).peak || 0, balance: (t[s.studentId] || {}).points || 0, look: s.look || A.startFor(s.studentId), avatarV2: s.avatarV2 || null, wear: s.wear || '', pet: s.pet || null, spent: 0, made: false, things: 0, companion: companionOut(s) })),
         recent: order.slice(-30).reverse().map(id => batches[id]), buys: [], quests: (M.quests || []).filter(q => q.classId === c.classId && q.active), claims: [] };
     }
@@ -9257,10 +9315,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
         if (!s) return Promise.reject(new Error('This pupil is not in this class any more. Reload Points.'));
         if (!value) return Promise.reject(new Error('Choose a valid SPARKADE avatar.'));
         s.avatarV2 = value; save(); return later({ ok: true, studentId: s.studentId, avatarV2: value }); },
+      saveScreen(p) { load(); const c = cls(p.classId); let screen; try { screen = cleanScreen(p.screen, screenOf(c)); } catch (e) { return Promise.reject(e); } c.screen = screen; save(); return later({ ok: true, classId: c.classId, screen }); },
       undo(p) { load(); const c = cls(p.classId); let found = 0; M.awards.forEach(a => { if (a.batchId === p.batchId && a.classId === c.classId) { found++; a.undone = true; } }); save(); return later(Object.assign({ ok: true, found: found > 0 }, totalsOut(c))); }
     };
   })();
-  const call = (name, payload) => DEMO ? sample[name](name === 'data' ? (payload || '') : (payload || {})) : rpc({ data: 'portalPointsData', setup: 'portalPointsSetup', saveClass: 'portalPointsSaveClass', newGoal: 'portalPointsNewGoal', saveStudents: 'portalPointsSaveStudents', resetPin: 'portalPointsResetPin', newLink: 'portalPointsNewLink', clearPauses: 'portalPointsClearPauses', saveBehaviours: 'portalPointsSaveBehaviours', saveBehaviour: 'portalPointsSaveBehaviour', removeBehaviour: 'portalPointsRemoveBehaviour', saveShop: 'portalPointsSaveShop', refund: 'portalPointsRefund', saveQuest: 'portalPointsSaveQuest', removeQuest: 'portalPointsRemoveQuest', decideClaims: 'portalPointsDecideClaims', award: 'portalPointsAward', undo: 'portalPointsUndo', giveEgg: 'portalPointsGiveEgg', hatch: 'portalPointsHatch', saveAvatar: 'portalPointsSaveAvatar' }[name], name === 'data' ? { classId: payload || '' } : payload || {});
+  const call = (name, payload) => DEMO ? sample[name](name === 'data' ? (payload || '') : (payload || {})) : rpc({ data: 'portalPointsData', setup: 'portalPointsSetup', saveClass: 'portalPointsSaveClass', newGoal: 'portalPointsNewGoal', saveStudents: 'portalPointsSaveStudents', resetPin: 'portalPointsResetPin', newLink: 'portalPointsNewLink', clearPauses: 'portalPointsClearPauses', saveBehaviours: 'portalPointsSaveBehaviours', saveBehaviour: 'portalPointsSaveBehaviour', removeBehaviour: 'portalPointsRemoveBehaviour', saveShop: 'portalPointsSaveShop', refund: 'portalPointsRefund', saveQuest: 'portalPointsSaveQuest', removeQuest: 'portalPointsRemoveQuest', decideClaims: 'portalPointsDecideClaims', award: 'portalPointsAward', undo: 'portalPointsUndo', giveEgg: 'portalPointsGiveEgg', hatch: 'portalPointsHatch', saveAvatar: 'portalPointsSaveAvatar', saveScreen: 'portalPointsSaveScreen' }[name], name === 'data' ? { classId: payload || '' } : payload || {});
 
   /* ---------- the model: what the sheet has confirmed, plus the awards still on their way ---------- */
   const cls = () => S.data && S.data.cls;
@@ -9461,7 +9520,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     ui.fullBtn = canFull ? h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else { const p = ui.stage.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } } catch (_) { /* refused */ } } }, document.fullscreenElement === ui.stage ? 'Exit full screen' : 'Full screen') : null;
     const waiting = c ? (c.claims || []).length : 0;
     ui.questsBtn = c ? h('button', { type: 'button', class: 'cp-secondary pts-small pts-quests-btn' + (waiting ? ' pts-has-waiting' : ''), onclick: () => openQuests() }, '🗺️ Quests', waiting ? h('span', { class: 'pts-badge', 'aria-label': waiting + ' waiting', text: String(waiting) }) : null) : null;
-    const tools = h('div', { class: 'pts-tools' }, ui.questsBtn, ui.selectToggle, ui.soundBtn, ui.fullBtn, h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => { S.view = 'setup'; render(); } }, 'Set up class'));
+    const tools = h('div', { class: 'pts-tools' }, ui.questsBtn, ui.selectToggle, ui.soundBtn, ui.fullBtn, h('button', { type: 'button', class: 'cp-secondary pts-small pts-screen-btn', onclick: () => openScreen() }, 'Pupil screen'), h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => { S.view = 'setup'; render(); } }, 'Set up class'));
     ui.selectBar = h('div', { class: 'pts-select-bar', hidden: true });
     if (!c) { ui.body.append(ui.tabs, ...(S.phase[S.classId] === 'loading' ? [h('div', { class: 'pts-panel pts-loading', role: 'status' }, h('p', { text: 'Opening ' + classLabel(S.classId) + '…' }))] : [])); return; }
     ui.jarCard = h('section', { class: 'pts-jar', 'aria-label': 'Class goal' });
@@ -9826,6 +9885,68 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     draw();
     S.ui.stage.append(layer);
     focusQuietly(dialog.querySelector('.pts-claim .cp-primary') || dialog.querySelector('.pts-new-quest'));
+  }
+
+  /* ---------- the Pupil screen dialog ---------- */
+  function openScreen() {
+    const c = cls(); if (!c) return;
+    const back = document.activeElement, classId = c.classId, cur = screenOf(c), st = { on: cur.banner.on, busy: false };
+    const close = () => { layer.remove(); document.removeEventListener('keydown', onKey, true); if (back && back.isConnected) focusQuietly(back); };
+    const msg = h('p', { class: 'pts-msg', role: 'status', text: '' });
+    const banner = h('textarea', { id: 'pts-screen-banner', rows: '3', maxlength: String(MAX_BANNER), spellcheck: 'false', autocomplete: 'off', placeholder: 'For example: Well done, ' + (c.name || c.code) + '! Keep reading every day.' });
+    banner.value = cur.banner.text;
+    const count = h('span', { class: 'pts-help pts-screen-count', 'aria-hidden': 'true', text: '' });
+    const drawCount = () => { count.textContent = String(banner.value || '').length + ' / ' + MAX_BANNER; };
+    banner.addEventListener('input', drawCount); drawCount();
+    const drawSwitch = () => { sw.textContent = st.on ? 'On' : 'Off'; sw.setAttribute('aria-checked', st.on ? 'true' : 'false'); sw.classList.toggle('pts-switch-on', st.on); };
+    const sw = h('button', { type: 'button', class: 'pts-switch' + (st.on ? ' pts-switch-on' : ''), role: 'switch', 'aria-checked': st.on ? 'true' : 'false', 'aria-label': 'Show the banner to pupils', onclick: () => { st.on = !st.on; drawSwitch(); } }, st.on ? 'On' : 'Off');
+    const boxes = {};
+    const check = (key, label, help) => {
+      boxes[key] = h('input', { type: 'checkbox', id: 'pts-screen-' + key });
+      boxes[key].checked = cur[key];
+      return h('div', { class: 'pts-screen-row' }, h('label', { class: 'pts-check', for: 'pts-screen-' + key }, boxes[key], h('span', { text: label })), help ? h('p', { class: 'pts-help', text: help }) : null);
+    };
+    const pick = (id, label, list, value) => {
+      const select = h('select', { id }, list.map(x => h('option', { value: x[0] }, x[1])));
+      select.value = value;
+      return { select, field: h('label', { class: 'cl-field', for: id }, h('span', { text: label }), select) };
+    };
+    const sky = pick('pts-screen-sky', 'Sky', SKIES, cur.sky), weather = pick('pts-screen-weather', 'Weather', WEATHERS, cur.weather);
+    const form = h('div', { class: 'pts-screen-form' },
+      h('section', { class: 'pts-screen-block' },
+        h('div', { class: 'pts-screen-bannerhead' }, h('label', { class: 'cl-field', for: 'pts-screen-banner' }, h('span', { text: 'Banner text' })), h('span', { class: 'pts-screen-switch' }, h('span', { class: 'pts-screen-switchlabel', text: 'Banner' }), sw)),
+        banner, h('div', { class: 'pts-screen-meta' }, h('p', { class: 'pts-help', text: 'A line from you at the top of the courtyard, shown on pupils’ screens while it is on. Up to ' + MAX_BANNER + ' characters.' }), count)),
+      check('sparkles', 'Show Sparkles under names'),
+      check('crest', 'Class crest and milestones'),
+      h('div', { class: 'pts-screen-pair' }, sky.field, weather.field),
+      check('care', 'Care at home', 'Pupils can pet, water, feed and walk their companion in My room.'),
+      check('sound', 'Sound on pupils’ screens', 'The starting choice only. Pupils still tap to turn sound on.'));
+    const save = () => {
+      if (st.busy) return;
+      const text = String(banner.value || '').replace(/\s+/g, ' ').trim();
+      if (/[<>]/.test(text)) { msg.textContent = 'The banner cannot contain < or >.'; focusQuietly(banner); return; }
+      if (text.length > MAX_BANNER) { msg.textContent = 'The banner can be up to ' + MAX_BANNER + ' characters.'; focusQuietly(banner); return; }
+      if (st.on && !text) { msg.textContent = 'Type the banner words first, or switch the banner off.'; focusQuietly(banner); return; }
+      const screen = { banner: { text, on: st.on }, sparkles: !!boxes.sparkles.checked, crest: !!boxes.crest.checked, sky: sky.select.value, weather: weather.select.value, care: !!boxes.care.checked, sound: !!boxes.sound.checked };
+      st.busy = true; saveBtn.disabled = true; msg.textContent = 'Saving…';
+      Promise.resolve(call('saveScreen', { classId, screen })).then(r => {
+        if (!r || r.ok !== true || !r.screen) { const error = new Error('The portal did not confirm this save.'); error.outcomeUnknown = true; throw error; }
+        const target = classOf(classId); if (target) target.screen = r.screen;
+        st.busy = false; saveBtn.disabled = false; msg.textContent = 'Saved. Pupils see it within a minute.';
+      }).catch(e => { st.busy = false; saveBtn.disabled = false; msg.textContent = saveFailureText(e); });
+    };
+    const saveBtn = h('button', { type: 'button', class: 'cp-primary', onclick: save }, 'Save');
+    const dialog = h('div', { class: 'pts-award pts-screen-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Pupil screen' },
+      h('div', { class: 'pts-award-head' }, h('div', null, h('p', { class: 'pts-award-who', text: 'Pupil screen' }), h('p', { class: 'pts-award-now', text: 'What pupils of ' + (c.name || c.code) + ' see in the courtyard at home.' })), h('button', { type: 'button', class: 'pts-x', 'aria-label': 'Close', onclick: close }, '×')),
+      form, msg, h('div', { class: 'cp-actions' }, saveBtn, h('button', { type: 'button', class: 'cp-secondary', onclick: close }, 'Close')));
+    const layer = h('div', { class: 'pts-layer', onclick: e => { if (e.target === layer) close(); } }, dialog);
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'Tab') { const f = [...dialog.querySelectorAll('button:not([disabled]),input,textarea,select')]; if (!f.length) return; const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
+    };
+    document.addEventListener('keydown', onKey, true);
+    S.ui.stage.append(layer);
+    focusQuietly(banner);
   }
 
   /* ---------- celebrations ---------- */
