@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SPARKADE</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0B1638">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* SPARKADE, the pupils' page, in the look book's colours: deep navy, warm gold, cream text; Cinzel for the big words
+   (the wordmark's serif), Nunito for everything a young reader has to read. One dark theme on every device; solid
+   fallbacks for forced colours; no motion for reduced motion. */
+:root{
+  --navy:#0B1638;--card:#142453;--card-2:#1E3474;--card-deep:#101D47;--gold:#E9C27A;--gold-text:#F2D49A;--cream:#FFF6E6;
+  --ink:#EEF2FF;--muted:#C9D3EE;--muted-2:#B4C0E0;--line:rgba(233,194,122,.28);--line-soft:rgba(238,242,255,.12);--shadow:rgba(3,8,28,.55);
+  --good:#7FE0B4;--bad:#FF9AAE;--spark:#E9C27A;
+  --display:"Cinzel","Trajan Pro","Georgia",serif;--text:"Nunito",system-ui,-apple-system,"Segoe UI","Noto Sans KR","Apple SD Gothic Neo",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;min-height:100vh;color:var(--ink);font:17px/1.55 var(--text);background-color:var(--navy);
+  background-image:radial-gradient(1.5px 1.5px at 12% 18%,rgba(255,246,230,.9) 50%,transparent 51%),radial-gradient(1px 1px at 78% 9%,rgba(255,246,230,.8) 50%,transparent 51%),
+    radial-gradient(1.5px 1.5px at 58% 32%,rgba(255,246,230,.7) 50%,transparent 51%),radial-gradient(1px 1px at 32% 62%,rgba(255,246,230,.6) 50%,transparent 51%),
+    radial-gradient(1.5px 1.5px at 88% 54%,rgba(255,246,230,.7) 50%,transparent 51%),radial-gradient(1px 1px at 18% 86%,rgba(255,246,230,.6) 50%,transparent 51%),
+    radial-gradient(1px 1px at 66% 80%,rgba(255,246,230,.7) 50%,transparent 51%),linear-gradient(180deg,#0E1B45 0,#0B1638 40%,#0A1230 100%);
+  background-attachment:fixed}
+.sp-app{display:flex;flex-direction:column;gap:16px;max-width:720px;margin:0 auto;padding-block:max(12px,env(safe-area-inset-top,0px)) 40px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+.sp-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+img{max-width:100%}
+
+.sp-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
+.sp-top-right{display:flex;align-items:center;gap:8px}
+.sp-wordmark{display:block;height:40px;width:auto;padding:3px 7px;border-radius:10px;border:1px solid var(--gold);background:var(--cream);box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.sp-brand{font:700 20px/1 var(--display);color:var(--gold-text);letter-spacing:.06em}
+.sp-brand-star{color:var(--gold)}
+.sp-class{padding:5px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:700;font-size:14px;color:var(--muted)}
+.sp-class:empty{display:none}
+.sp-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:linear-gradient(180deg,#1E3474,#142453);border:1px solid var(--gold);color:var(--gold-text);font-weight:800;font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px rgba(0,0,0,.2),0 4px 14px var(--shadow)}
+.sp-chip-star{color:var(--gold)}
+.sp-link{min-height:44px;padding:0 4px;border:0;background:none;color:var(--gold-text);font-weight:700;font-size:16px;text-decoration:underline;text-underline-offset:3px}
+.sp-card{padding:18px;background:linear-gradient(180deg,var(--card),var(--card-deep));border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 30px var(--shadow)}
+.sp-wait p,.sp-problem p{margin:0}
+.sp-problem{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.sp-big{font:700 28px/1.1 var(--display);color:var(--gold-text)}
+.sp-title{margin:0;font:700 clamp(26px,7vw,36px)/1.1 var(--display);color:var(--cream);text-wrap:balance;letter-spacing:.02em}
+.sp-lead{margin:2px 0 0;color:var(--muted);font-size:18px}
+.sp-h2{margin:0 0 10px;font:700 19px/1.25 var(--display);color:var(--gold-text);letter-spacing:.02em}
+.sp-h3{margin:14px 0 8px;font:700 16px/1.25 var(--display);color:var(--gold-text);letter-spacing:.02em}
+.sp-muted{margin:0;color:var(--muted-2);font-size:14.5px}
+.sp-strong{margin:0;font-weight:800;color:var(--cream)}
+.sp-btn{min-height:48px;padding:10px 20px;border:0;border-radius:14px;background:linear-gradient(180deg,#F2D49A,#D9A95A);color:#2A1D05;font-weight:800;font-size:16px;box-shadow:0 3px 0 #8d6a2b,0 8px 18px var(--shadow)}
+.sp-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #8d6a2b}
+.sp-btn-soft{background:var(--card-2);color:var(--cream);border:1px solid var(--line);box-shadow:none}
+
+/* Who are you? */
+.sp-pick{display:flex;flex-direction:column;gap:12px}
+.sp-names{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:12px;margin-top:6px}
+.sp-name{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:44px;padding:10px 8px 12px;border:1px solid var(--line-soft);border-radius:18px;background:linear-gradient(180deg,var(--card-2),var(--card));box-shadow:0 8px 18px var(--shadow);transition:transform .12s ease,border-color .12s ease}
+.sp-name:hover{transform:translateY(-2px);border-color:var(--gold)}
+.sp-name-art{width:72px;height:96px}
+.sp-name-art>svg,.sp-pin-art>svg,.sp-sticker-art>svg,.sp-castle-me>svg{display:block;width:100%;height:100%}
+.sp-name-text{font-weight:800;font-size:16px;color:var(--cream);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Your PIN */
+.sp-pin{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.sp-pin-art{width:96px;height:128px}
+.sp-dots{display:flex;gap:16px;margin:14px 0 4px}
+.sp-dot{width:20px;height:20px;border-radius:50%;border:3px solid var(--gold);background:transparent;transition:background .1s ease}
+.sp-dot-on{background:var(--gold)}
+.sp-pin-msg{margin:0;min-height:1.5em;font-weight:700;color:var(--bad);max-width:34ch}
+.sp-keys{display:grid;grid-template-columns:repeat(3,74px);gap:12px;margin-top:8px}
+.sp-key{height:74px;border:1px solid var(--line-soft);border-radius:50%;background:linear-gradient(180deg,var(--card-2),var(--card));color:var(--cream);font:700 28px/1 var(--display);box-shadow:0 6px 14px var(--shadow)}
+.sp-key:active{transform:translateY(2px);box-shadow:none}
+.sp-key-back{font:700 24px/1 var(--text);color:var(--muted)}
+
+/* The castle */
+.sp-castle{position:relative;overflow:hidden;border-radius:22px;border:1px solid var(--line);box-shadow:0 14px 34px var(--shadow);background:#1a2650;min-height:240px}
+.sp-castle-bg{display:block;width:100%;height:auto;aspect-ratio:640/421;object-fit:cover}
+.sp-castle-plain{aspect-ratio:640/421;background:linear-gradient(180deg,#2a3f8a,#15224f)}
+.sp-castle-scene{position:absolute;left:0;right:0;bottom:0;height:62%;pointer-events:none}
+.sp-castle-me{position:absolute;left:5%;bottom:4%;width:22%;max-width:130px;aspect-ratio:120/160;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+.sp-castle-pet{position:absolute;right:4%;bottom:0;width:40%;max-width:230px;pointer-events:auto;cursor:pointer;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
+.sp-castle-pet .sp-cart-pic{border:0;background:none;border-radius:0;-webkit-mask-image:radial-gradient(ellipse 62% 60% at 50% 58%,#000 58%,transparent 82%);mask-image:radial-gradient(ellipse 62% 60% at 50% 58%,#000 58%,transparent 82%)}
+.sp-castle-pet .sp-cart-standin{background:none;border:0}
+.sp-castle-pet .sp-cart-tag{display:none}
+.sp-castle-pet .sp-cart-glow{width:88%;height:88%}
+.sp-castle-egg{width:22%;max-width:120px;right:9%}
+.sp-castle-copy{position:absolute;left:0;right:0;top:0;padding:12px 16px 40px;background:linear-gradient(180deg,rgba(11,22,56,.78) 0,rgba(11,22,56,.45) 60%,transparent 100%);pointer-events:none}
+.sp-me{margin:0;font:700 clamp(24px,6.5vw,34px)/1.1 var(--display);color:var(--cream);letter-spacing:.03em;text-shadow:0 2px 8px rgba(0,0,0,.6);overflow-wrap:anywhere}
+.sp-points{margin:2px 0 0;display:flex;align-items:baseline;gap:6px;font:800 clamp(30px,8vw,44px)/1 var(--text);font-variant-numeric:tabular-nums;color:var(--gold-text);text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.sp-star{color:var(--gold)}
+.sp-points-word{font:700 17px/1 var(--text);color:var(--muted)}
+.sp-count{display:inline-block;transform-origin:50% 80%;margin-right:2px}
+.sp-gained{margin:4px 0 0;display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(242,212,154,.18);border:1px solid var(--gold);color:var(--gold-text);font-weight:800;font-size:14px}
+.sp-wallet{margin:4px 0 0;color:var(--muted);font-weight:700;font-size:14px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.sp-board-status{margin:0;color:var(--muted);font-size:15px}
+.sp-board-status:empty{display:none}
+
+/* The companion */
+.sp-companion{position:relative}
+.sp-crow{display:flex;align-items:center;gap:14px}
+.sp-ccopy{flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:6px}
+.sp-egg-btn{position:relative;flex:none;width:min(40vw,168px);padding:0;border:0;background:none;border-radius:18px}
+.sp-cart{display:block;width:100%;aspect-ratio:1;overflow:hidden;border-radius:18px}
+.sp-cart-pic{background:radial-gradient(circle at 50% 60%,#1E3474,#0d1839 75%);border:1px solid var(--line-soft)}
+.sp-cimg{display:block;width:100%;height:100%;object-fit:cover}
+.sp-cart-standin{position:relative;display:flex;align-items:center;justify-content:center;border:2px dashed var(--gold);background:radial-gradient(circle at 50% 45%,rgba(233,194,122,.16),rgba(11,22,56,.2) 70%)}
+.sp-cart-glow{display:block;width:72%;height:72%}
+.sp-cart-glow>svg{display:block;width:100%;height:100%}
+.sp-cart-tag{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);white-space:nowrap;padding:3px 10px;border-radius:999px;background:var(--gold);color:#2A1D05;font-weight:800;font-size:12px}
+.sp-care-reaction{position:absolute;right:6px;top:4px;font-size:30px;line-height:1.2;animation:sp-float 2.2s ease-out forwards}
+@keyframes sp-float{0%{transform:translateY(6px);opacity:0}15%{opacity:1}100%{transform:translateY(-22px);opacity:0}}
+.sp-wobble{animation:sp-wobble .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes sp-wobble{0%,100%{transform:none}30%{transform:rotate(-5deg) translateY(-6px)}60%{transform:rotate(4deg)}}
+.sp-care-walk{animation:sp-stroll 2.2s ease-in-out}
+@keyframes sp-stroll{0%,100%{transform:translateX(0)}50%{transform:translateX(-26px)}}
+.sp-stages{display:inline-flex;gap:7px}
+.sp-stage-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);background:transparent}
+.sp-stage-on{background:var(--gold);box-shadow:0 0 10px rgba(233,194,122,.7)}
+.sp-tonight{color:var(--gold-text)}
+.sp-grew{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 36px rgba(233,194,122,.35),0 10px 30px var(--shadow)}
+.sp-grew-line{margin:-4px 0 10px;padding:8px 12px;border-radius:12px;background:rgba(242,212,154,.14);border:1px solid var(--gold);color:var(--gold-text);font-weight:800}
+.sp-grew .sp-cart{animation:sp-born .9s cubic-bezier(.2,1.6,.4,1)}
+@keyframes sp-born{0%{filter:brightness(2.4);transform:scale(.7)}100%{filter:none;transform:none}}
+.sp-bar{height:12px;border-radius:999px;background:rgba(238,242,255,.12);overflow:hidden}
+.sp-bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#D9A95A,#F2D49A)}
+.sp-egg-goal{display:flex;align-items:center;gap:14px}
+.sp-egg-goal-art{flex:none;width:92px;height:92px}
+.sp-egg-goal-art>svg{display:block;width:100%;height:100%}
+.sp-egg-goal-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.sp-care{display:flex;flex-direction:column;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.sp-care-msg{margin:0;font-weight:800;color:var(--cream)}
+.sp-care-actions{display:flex;flex-wrap:wrap;gap:8px}
+.sp-care-actions .sp-btn{min-height:44px;padding:8px 16px;font-size:15px}
+
+/* Meet the companions */
+.sp-meet-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.sp-meet-btn{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px;padding:4px;border:1px solid transparent;border-radius:14px;background:none}
+.sp-meet-btn .sp-cart{border-radius:12px}
+.sp-meet-on{border-color:var(--gold);background:rgba(233,194,122,.1)}
+.sp-meet-name{font-size:11px;font-weight:800;color:var(--muted);text-align:center;line-height:1.15}
+.sp-meet-open{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.sp-meet-stages{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.sp-meet-stage{display:flex;flex-direction:column;align-items:center;gap:3px}
+.sp-meet-stage .sp-cart{border-radius:10px}
+.sp-meet-stage .sp-cart-tag{font-size:9px;padding:2px 6px;bottom:4px}
+.sp-meet-stage-name{font-size:10.5px;font-weight:800;color:var(--muted);text-align:center;line-height:1.15}
+
+/* The class goal */
+.sp-jar{display:flex;align-items:center;gap:16px}
+.sp-jar-art{flex:none;width:100px}
+.sp-jar-art svg{display:block;width:100%;height:auto}
+.sp-jar-copy{min-width:0}
+.sp-jar-copy .sp-h2{margin-bottom:4px}
+.sp-jar-count{margin:0;color:var(--muted);font-variant-numeric:tabular-nums}
+.sp-jar-count strong{font:800 26px/1 var(--text);color:var(--gold-text)}
+.sp-jar-left{margin:4px 0 0;font-weight:800;color:var(--cream)}
+
+/* My Sparkles */
+.sp-history{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.sp-hist{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line-soft)}
+.sp-hist:first-child{border-top:0}
+.sp-hist-icon{font-size:24px;text-align:center}
+.sp-hist-label{display:flex;flex-direction:column;min-width:0}
+.sp-hist-label strong{font-weight:800;color:var(--cream)}
+.sp-hist-label span{font-size:14px;color:var(--muted-2)}
+.sp-hist-pts{font:800 22px/1 var(--text);color:var(--good);font-variant-numeric:tabular-nums}
+.sp-hist-neg .sp-hist-pts{color:var(--bad)}
+
+/* My class */
+.sp-class-board{display:flex;flex-direction:column;gap:4px}
+.sp-stickers{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.sp-sticker{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px 10px;background:var(--card-2);border:1px solid var(--line-soft);border-radius:16px}
+.sp-sticker-me{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.sp-sticker-art{width:64px;height:86px}
+.sp-sticker-pet{position:absolute;right:6px;top:6px;width:38px}
+.sp-sticker-pet .sp-cart{border-radius:10px}
+.sp-sticker-pet .sp-cart-tag{display:none}
+.sp-sticker-name{font-weight:800;font-size:15px;color:var(--cream);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-sticker-pts{font:800 16px/1 var(--text);color:var(--gold-text);font-variant-numeric:tabular-nums}
+.sp-sticker-pts.sp-neg{color:var(--bad)}
+.sp-sticker-stage{font-size:11.5px;font-weight:800;color:var(--muted)}
+
+/* Coming soon, and the end */
+.sp-soon{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sp-soon-tile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);text-align:center}
+.sp-soon-name{font:700 14px/1.2 var(--display);color:var(--gold-text);letter-spacing:.02em}
+.sp-soon-tag{font-size:11.5px;font-weight:800}
+.sp-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+
+/* The avatar maker is a local preview; the gold action displays a teacher code. */
+.sp-wardrobe-entry{min-height:72px;background:var(--card-2);border:1px solid var(--gold)}
+.sp-wardrobe-entry:hover{background:#29448A}
+.sp-wardrobe{display:flex;flex-direction:column;gap:12px}
+.sp-avatar-studio{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start;margin-top:4px}
+.sp-avatar-stage{position:relative;min-width:0;aspect-ratio:1/1.22;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:radial-gradient(ellipse at 50% 68%,#335197 0,#1B2C61 44%,#101D47 80%)}
+.sp-avatar-preview-tag{position:absolute;z-index:1;left:12px;top:12px;color:var(--gold-text);font-size:13px;font-weight:800}
+.sp-avatar-preview-art{position:absolute;left:-11%;bottom:4%;width:112%;aspect-ratio:1;filter:drop-shadow(0 8px 10px rgba(3,8,28,.4))}
+.sp-avatar-preview-art>svg{display:block;width:100%;height:100%}
+.sp-avatar-preview-companion{position:absolute;right:1%;bottom:4%;width:35%;filter:drop-shadow(0 5px 6px rgba(3,8,28,.4))}
+.sp-avatar-preview-companion .sp-cart-pic{background:none;border:0}
+.sp-avatar-controls{display:flex;flex-direction:column;gap:16px;min-width:0}
+.sp-avatar-group{border:0;margin:0;padding:0;min-width:0}
+.sp-avatar-group legend{padding:0;margin:0 0 8px;color:var(--gold-text);font-weight:800;font-size:16px}
+.sp-avatar-options{display:flex;flex-wrap:wrap;gap:8px}
+.sp-avatar-choice{min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card-deep);color:var(--cream);font-weight:700;font-size:14px;text-align:left}
+.sp-avatar-choice:hover{border-color:var(--gold)}
+.sp-avatar-choice-on{background:var(--gold);border-color:var(--gold);color:#2A1D05;box-shadow:inset 0 0 0 2px var(--card-deep)}
+.sp-avatar-actions{display:flex;flex-wrap:wrap;gap:10px}
+.sp-avatar-code-box{padding:16px;border:1px solid var(--gold);border-radius:14px;background:var(--card-deep)}
+.sp-avatar-code-box[hidden]{display:none}
+.sp-avatar-code{display:block;margin:4px 0 12px;font:800 clamp(18px,4.5vw,26px)/1.4 var(--text);letter-spacing:.04em;color:var(--cream);overflow-wrap:anywhere;user-select:all}
+
+@media (max-width:540px){.sp-avatar-studio{grid-template-columns:minmax(0,1fr);gap:16px}.sp-avatar-stage{width:min(100%,300px);justify-self:center;aspect-ratio:1}.sp-avatar-preview-art{left:-5%;width:95%;bottom:2%}.sp-avatar-preview-companion{width:32%;right:1%;bottom:3%}.sp-avatar-actions>.sp-btn{flex:1 1 180px}}
+@media (forced-colors:active){.sp-avatar-stage,.sp-avatar-choice,.sp-avatar-code-box{border:1px solid CanvasText}.sp-avatar-choice-on{outline:3px solid Highlight}}
+
+@media (max-width:420px){.sp-keys{grid-template-columns:repeat(3,68px)}.sp-key{height:68px}.sp-crow{flex-wrap:wrap}.sp-egg-btn{width:min(44vw,160px)}.sp-top{flex-wrap:wrap}.sp-wordmark{height:32px}.sp-castle-copy{padding-bottom:30px}.sp-stickers{grid-template-columns:repeat(auto-fill,minmax(94px,1fr))}.sp-meet-row{grid-template-columns:repeat(5,1fr)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (forced-colors:active){.sp-card,.sp-sticker,.sp-name,.sp-castle,.sp-soon-tile{border:1px solid CanvasText}.sp-meet-on{outline:3px solid Highlight}.sp-stage-on{background:Highlight}}
+
+/* Preserve the existing avatar breathing/blinking motion. */
+.pa-figure-breathe,.pa-pet-breathe{transform-box:fill-box;transform-origin:center bottom;animation:pa-breathe 4s ease-in-out infinite}
+.pa-blink{transform-box:fill-box;transform-origin:center;animation:pa-blink 5.5s infinite}
+@keyframes pa-breathe{50%{transform:scale(1.015,1.025)}}
+@keyframes pa-blink{0%,43%,47%,100%{transform:scaleY(1)}45%{transform:scaleY(.08)}}
+@media (prefers-reduced-motion:reduce){.pa-figure-breathe,.pa-pet-breathe,.pa-blink{animation:none!important}}
+
+
+</style>
+</head>
+<body>
+<main class="sp-app" id="sp-app">
+  <div class="sp-card sp-wait" role="status"><p>Opening SPARKADE…</p></div>
+</main>
+<p class="sp-sr" id="sp-live" role="status" aria-live="polite"></p>
+<script>
+/* Spark Education Portal · points core: the rules behind Teaching › Points and the students' home page, with no page code,
+ * so the teacher board, the student page and the server (PortalPoints.gs) all count the same way, and the rules can be
+ * tested on their own (pilot/tests/points.test.cjs). Written in the plain style of the .gs files so Code.gs can carry it.
+ *
+ * Data contract:
+ * - An award is {studentId, points, at (ISO time), undone}. A student's points are the sum of their awards that are not
+ *   undone; points can go below zero ("needs work" awards are negative).
+ * - A student's creature grows with their peak: the highest their running total has ever been, in time order. A creature
+ *   never shrinks back after a minus point; it waits until the points climb past the peak again.
+ * - A creature is "species-colour", for example "bun-sky". Anything else is drawn as the default creature.
+ * - The class goal (the marble jar) counts the class's points since the goal started, never below zero.
+ */
+var PointsCore = (function () {
+  'use strict';
+  // Points needed for levels 1 to 10; from level 10 every 50 more points is another level.
+  var LEVELS = [0, 5, 15, 30, 50, 75, 105, 140, 180, 225];
+  var AFTER_TEN = 50;
+  var STAGE_NAMES = ['Egg', 'Baby', 'Little', 'Big', 'Super', 'Legend'];
+  var SPECIES = [['blob', 'Blobby'], ['sprout', 'Sprout'], ['bun', 'Bunny'], ['spike', 'Spiky'], ['cloud', 'Puff'], ['drop', 'Drip'], ['kitty', 'Kitty'], ['dragon', 'Dragon']];
+  // [name, body, shade, light]
+  var COLOURS = [
+    ['coral', '#ff8a7a', '#de6456', '#ffd6cd'], ['sun', '#ffcd45', '#e3a320', '#fff1c2'], ['mint', '#6ad4ad', '#3fae88', '#cff3e5'],
+    ['sky', '#6db6ff', '#4689d8', '#d5eaff'], ['grape', '#b28dff', '#8a62e0', '#e9deff'], ['peach', '#ffb27a', '#e48b4e', '#ffe3cc'],
+    ['lime', '#a6dd60', '#7fb937', '#e6f7cd'], ['berry', '#ff7db5', '#dd558d', '#ffd5e7']
+  ];
+  var INK = '#1d2433';
+  // Pictures a button can have: the first row for well done, the second for needs work (the older ones stay valid).
+  var ICONS = ['⭐', '🌟', '🙋', '🤝', '💪', '📚', '📖', '✏️', '🗣️', '🙌', '👏', '👍', '🏆', '🥇', '🎯', '🧠', '💡', '🎨', '🎵', '❤️', '😊', '🎉', '🔥', '🚀', '⚡', '🧹', '🦸', '🌈', '👂',
+    '💬', '💤', '📭', '⏰', '📵', '🔇', '🙊', '😴', '🐢', '📱', '🚫', '⚠️', '👎', '❌', '🗑️', '🍬', '🏃', '😡'];
+  // What a pupil earns: one word everywhere a number of points is shown.
+  var CURRENCY = { one: 'Sparkle', many: 'Sparkles' };
+  // Names a teacher can tap when making a new button.
+  var IDEAS = { plus: [['Great answer', '⭐'], ['Helping others', '🤝'], ['Hard work', '💪'], ['Homework done', '📚'], ['Speaking English', '🗣️'], ['Teamwork', '🙌'], ['Great reading', '📖'], ['Perfect score', '🏆'], ['Kind words', '❤️'], ['Tidy desk', '🧹'], ['Creative idea', '💡'], ['Listening well', '👂']],
+    minus: [['Speaking Korean', '💬'], ['Off task', '💤'], ['No homework', '📭'], ['Late', '⏰'], ['Phone out', '📵'], ['Too noisy', '🔇'], ['Unkind words', '🙊'], ['Running inside', '🏃']] };
+  var DEFAULT_BEHAVIOURS = [
+    ['Great answer', 1, '⭐'], ['Helping others', 1, '🤝'], ['Hard work', 1, '💪'], ['Homework done', 1, '📚'],
+    ['Speaking English', 1, '🗣️'], ['Teamwork', 1, '🙌'], ['Great reading', 1, '📖'], ['Perfect score', 2, '🏆'],
+    ['Speaking Korean', -1, '💬'], ['Off task', -1, '💤'], ['No homework', -1, '📭'], ['Late', -1, '⏰']
+  ];
+
+  function levelFor(peak) {
+    var p = Math.max(0, Math.floor(Number(peak) || 0)), level = 1, floor = 0, next;
+    for (var i = LEVELS.length - 1; i >= 0; i--) { if (p >= LEVELS[i]) { level = i + 1; floor = LEVELS[i]; break; } }
+    if (level === LEVELS.length) {
+      var extra = Math.floor((p - LEVELS[LEVELS.length - 1]) / AFTER_TEN);
+      level += extra; floor = LEVELS[LEVELS.length - 1] + extra * AFTER_TEN; next = floor + AFTER_TEN;
+    } else next = LEVELS[level];
+    var stage = stageFor(level);
+    return { level: level, floor: floor, next: next, toNext: next - p, progress: Math.min(1, (p - floor) / (next - floor)), stage: stage, stageName: STAGE_NAMES[stage],
+      // The points at which this creature next changes shape (not just level), or null for a Legend.
+      nextStageAt: stage >= 5 ? null : LEVELS[[1, 3, 5, 7, 9][stage]] };
+  }
+  // Adjustable launch defaults. Positive, non-undone awards grow land; purchases and minus points do not.
+  var ISLAND_STAGES = [0, 50, 150, 300];
+  function islandFor(earned) {
+    var value = Number(earned), stage = 0;
+    value = isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    for (var i = 1; i < ISLAND_STAGES.length; i++) if (value >= ISLAND_STAGES[i]) stage = i;
+    var next = ISLAND_STAGES[stage + 1];
+    return { earned: value, stage: stage, next: next === undefined ? null : next,
+      progress: next === undefined ? 1 : (value - ISLAND_STAGES[stage]) / (next - ISLAND_STAGES[stage]) };
+  }
+  function stageFor(level) { return level <= 1 ? 0 : level <= 3 ? 1 : level <= 5 ? 2 : level <= 7 ? 3 : level <= 9 ? 4 : 5; }
+
+  /* Totals in time order: points (the sum) and peak (the highest the running total has been). Undone awards are left out. */
+  function totals(awards) {
+    var list = (awards || []).filter(function (a) { return a && !a.undone && a.studentId; }).slice();
+    list.sort(function (a, b) { return String(a.at).localeCompare(String(b.at)); });
+    var out = {};
+    list.forEach(function (a) {
+      var t = out[a.studentId] || (out[a.studentId] = { points: 0, peak: 0, plus: 0, minus: 0, count: 0 });
+      var n = Number(a.points) || 0;
+      t.points += n; t.count++;
+      if (n > 0) t.plus += n; else t.minus -= n;
+      if (t.points > t.peak) t.peak = t.points;
+    });
+    return out;
+  }
+  function goalProgress(awards, since) {
+    var start = String(since || ''), sum = 0;
+    (awards || []).forEach(function (a) { if (a && !a.undone && String(a.at) >= start) sum += Number(a.points) || 0; });
+    return Math.max(0, sum);
+  }
+
+  function creatureParts(code) {
+    var m = /^([a-z]+)-([a-z]+)$/.exec(String(code || ''));
+    var species = m && SPECIES.some(function (s) { return s[0] === m[1]; }) ? m[1] : 'blob';
+    var colour = m && COLOURS.some(function (c) { return c[0] === m[2]; }) ? m[2] : 'sky';
+    return { species: species, colour: colour, code: species + '-' + colour, valid: !!m && species === m[1] && colour === m[2] };
+  }
+  function validCreature(code) { return creatureParts(code).valid; }
+  /* A starting creature that differs from its neighbours': species and colour step through their lists. */
+  function creatureFor(index) {
+    var i = Math.max(0, Math.floor(Number(index) || 0));
+    return SPECIES[i % SPECIES.length][0] + '-' + COLOURS[(i * 3 + Math.floor(i / SPECIES.length)) % COLOURS.length][0];
+  }
+  function speciesName(code) { var p = creatureParts(code); return SPECIES.filter(function (s) { return s[0] === p.species; })[0][1]; }
+
+  /* ---------- Drawing (SVG text; every value in it comes from the lists above, never from what someone typed) ---------- */
+  function n(v) { return Math.round(v * 10) / 10; }
+  function ell(cx, cy, rx, ry, fill, extra) { return '<ellipse cx="' + n(cx) + '" cy="' + n(cy) + '" rx="' + n(rx) + '" ry="' + n(ry) + '" fill="' + fill + '"' + (extra || '') + '/>'; }
+  function circ(cx, cy, r, fill, extra) { return '<circle cx="' + n(cx) + '" cy="' + n(cy) + '" r="' + n(r) + '" fill="' + fill + '"' + (extra || '') + '/>'; }
+  function path(d, fill, extra) { return '<path d="' + d + '" fill="' + fill + '"' + (extra || '') + '/>'; }
+  function rot(deg, x, y) { return ' transform="rotate(' + n(deg) + ' ' + n(x) + ' ' + n(y) + ')"'; }
+
+  /* The silhouette: everything that gets the white sticker edge. paint(role) gives the colour of each part. */
+  function silhouette(species, stage, g, paint) {
+    var s = g.s, cx = g.cx, cy = g.cy, rx = g.rx, ry = g.ry, out = [];
+    if (stage >= 4 && species !== 'dragon') { // wings behind the body
+      out.push(ell(cx - rx - 5 * s, cy - 8 * s, 13 * s, 7.5 * s, paint('wing'), rot(-28, cx - rx - 5 * s, cy - 8 * s)));
+      out.push(ell(cx + rx + 5 * s, cy - 8 * s, 13 * s, 7.5 * s, paint('wing'), rot(28, cx + rx + 5 * s, cy - 8 * s)));
+    }
+    if (species === 'dragon') { // bat wings that grow with the dragon, and a tail
+      var k = 0.75 + stage * 0.12;
+      [-1, 1].forEach(function (d) {
+        var bx = cx + d * (rx - 4 * s), by = cy - 6 * s;
+        out.push(path('M' + n(bx) + ' ' + n(by) + ' L' + n(bx + d * 20 * s * k) + ' ' + n(by - 16 * s * k) + ' L' + n(bx + d * 16 * s * k) + ' ' + n(by - 3 * s * k) +
+          ' L' + n(bx + d * 22 * s * k) + ' ' + n(by + 2 * s * k) + ' L' + n(bx + d * 13 * s * k) + ' ' + n(by + 8 * s * k) + ' Z', paint('shade')));
+      });
+      out.push(path('M' + n(cx + rx * 0.55) + ' ' + n(cy + ry * 0.4) + ' Q' + n(cx + rx + 16 * s) + ' ' + n(cy + ry * 1.05) + ' ' + n(cx + rx + 17 * s) + ' ' + n(cy - ry * 0.05) +
+        ' L' + n(cx + rx + 11 * s) + ' ' + n(cy + ry * 0.2) + ' Q' + n(cx + rx + 7 * s) + ' ' + n(cy + ry * 0.62) + ' ' + n(cx + rx * 0.55) + ' ' + n(cy + ry * 0.8) + ' Z', paint('body')));
+      out.push(path('M' + n(cx + rx + 17 * s) + ' ' + n(cy - ry * 0.05) + ' l' + n(-7 * s) + ' ' + n(-4 * s) + ' l' + n(2 * s) + ' ' + n(9 * s) + ' Z', paint('shade')));
+      [-1, 1].forEach(function (d) { out.push(path('M' + n(cx + d * 13 * s) + ' ' + n(cy - ry + 4 * s) + ' L' + n(cx + d * 10 * s) + ' ' + n(cy - ry - 9 * s) + ' L' + n(cx + d * 5 * s) + ' ' + n(cy - ry + 1 * s) + ' Z', paint('horn'))); });
+    }
+    if (species === 'kitty') {
+      [-1, 1].forEach(function (d) { out.push(path('M' + n(cx + d * 22 * s) + ' ' + n(cy - ry * 0.5) + ' L' + n(cx + d * 16 * s) + ' ' + n(cy - ry - 12 * s) + ' L' + n(cx + d * 4 * s) + ' ' + n(cy - ry * 0.93) + ' Z', paint('body'))); });
+    }
+    if (species === 'bun') {
+      var earH = stage === 1 ? 9 : 19;
+      out.push(ell(cx - 11 * s, cy - ry - earH * s * 0.55, 7 * s, earH * s, paint('body'), rot(-10, cx - 11 * s, cy - ry)));
+      out.push(ell(cx + 11 * s, cy - ry - earH * s * 0.55, 7 * s, earH * s, paint('body'), rot(10, cx + 11 * s, cy - ry)));
+    }
+    if (species === 'sprout') {
+      out.push(path('M' + n(cx) + ' ' + n(cy - ry + 2) + ' Q' + n(cx + 2 * s) + ' ' + n(cy - ry - 8 * s) + ' ' + n(cx) + ' ' + n(cy - ry - 13 * s), 'none', ' stroke="' + paint('stem') + '" stroke-width="' + n(3 * s) + '" stroke-linecap="round"'));
+      out.push(path(leaf(cx, cy - ry - 12 * s, 11 * s, 1), paint('leaf')));
+      if (stage >= 3) out.push(path(leaf(cx, cy - ry - 10 * s, 9 * s, -1), paint('leaf')));
+    }
+    if (species === 'spike') {
+      var count = 2 + stage, a0 = Math.PI * 1.12, a1 = Math.PI * 1.88;
+      for (var i = 0; i < count; i++) {
+        var a = a0 + (a1 - a0) * (count === 1 ? 0.5 : i / (count - 1)), bx = cx + Math.cos(a) * rx * 0.86, by = cy + Math.sin(a) * ry * 0.86;
+        var w = 0.22, tip = 15 * s;
+        out.push(path('M' + n(cx + Math.cos(a - w) * rx * 0.92) + ' ' + n(cy + Math.sin(a - w) * ry * 0.92) + ' L' + n(bx + Math.cos(a) * tip) + ' ' + n(by + Math.sin(a) * tip) +
+          ' L' + n(cx + Math.cos(a + w) * rx * 0.92) + ' ' + n(cy + Math.sin(a + w) * ry * 0.92) + ' Z', paint('shade')));
+      }
+    }
+    if (stage >= 2) { // feet
+      out.push(ell(cx - 12 * s, cy + ry - 3 * s, 8.5 * s, 5.5 * s, paint('shade')));
+      out.push(ell(cx + 12 * s, cy + ry - 3 * s, 8.5 * s, 5.5 * s, paint('shade')));
+    }
+    if (stage >= 3) { // arms
+      out.push(ell(cx - rx + 1 * s, cy + 5 * s, 6 * s, 10 * s, paint('body'), rot(28, cx - rx + 1 * s, cy + 5 * s)));
+      out.push(ell(cx + rx - 1 * s, cy + 5 * s, 6 * s, 10 * s, paint('body'), rot(-28, cx + rx - 1 * s, cy + 5 * s)));
+    }
+    if (species === 'cloud') {
+      out.push(circ(cx - 17 * s, cy - 4 * s, 16 * s, paint('body')), circ(cx + 17 * s, cy - 4 * s, 16 * s, paint('body')),
+        circ(cx - 7 * s, cy - 15 * s, 17 * s, paint('body')), circ(cx + 9 * s, cy - 14 * s, 15 * s, paint('body')), ell(cx, cy + 4 * s, rx, ry * 0.8, paint('body')));
+    } else if (species === 'drop') {
+      out.push(path('M' + n(cx) + ' ' + n(cy - ry - 13 * s) + ' C' + n(cx + rx * 0.28) + ' ' + n(cy - ry * 0.95) + ' ' + n(cx + rx * 1.02) + ' ' + n(cy - ry * 0.55) + ' ' + n(cx + rx * 1.02) + ' ' + n(cy + ry * 0.18) +
+        ' C' + n(cx + rx * 1.02) + ' ' + n(cy + ry * 1.08) + ' ' + n(cx - rx * 1.02) + ' ' + n(cy + ry * 1.08) + ' ' + n(cx - rx * 1.02) + ' ' + n(cy + ry * 0.18) +
+        ' C' + n(cx - rx * 1.02) + ' ' + n(cy - ry * 0.55) + ' ' + n(cx - rx * 0.28) + ' ' + n(cy - ry * 0.95) + ' ' + n(cx) + ' ' + n(cy - ry - 13 * s) + ' Z', paint('body')));
+    } else {
+      out.push(ell(cx, cy, rx, ry, paint('body')));
+    }
+    if (species === 'blob' && stage >= 2) {
+      out.push(circ(cx - 5 * s, cy - ry - 1 * s, 4.5 * s, paint('body')), circ(cx + 2 * s, cy - ry - 4 * s, 5.5 * s, paint('body')), circ(cx + 8 * s, cy - ry, 4 * s, paint('body')));
+    }
+    if (stage >= 5) { // crown
+      var top = cy - ry - crownLift(species) * s, w2 = 13 * s;
+      out.push(path('M' + n(cx - w2) + ' ' + n(top + 9 * s) + ' L' + n(cx - w2) + ' ' + n(top - 3 * s) + ' L' + n(cx - w2 / 2) + ' ' + n(top + 3 * s) + ' L' + n(cx) + ' ' + n(top - 7 * s) +
+        ' L' + n(cx + w2 / 2) + ' ' + n(top + 3 * s) + ' L' + n(cx + w2) + ' ' + n(top - 3 * s) + ' L' + n(cx + w2) + ' ' + n(top + 9 * s) + ' Z', paint('crown')));
+    }
+    return out.join('');
+  }
+  function crownLift(species) { return { bun: 24, drop: 18, sprout: 22, kitty: 15, dragon: 13 }[species] || 9; }
+  function leaf(x, y, size, dir) {
+    var ex = x + dir * size, ey = y - size * 0.45;
+    return 'M' + n(x) + ' ' + n(y) + ' Q' + n(x + dir * size * 0.5) + ' ' + n(y - size * 0.95) + ' ' + n(ex) + ' ' + n(ey) + ' Q' + n(x + dir * size * 0.55) + ' ' + n(y + size * 0.15) + ' ' + n(x) + ' ' + n(y) + ' Z';
+  }
+  function face(stage, g, mood, colour) {
+    var s = g.s, cx = g.cx, cy = g.cy, out = [], er = (stage === 1 ? 7.2 : 6) * s, ey = cy - 4 * s, gap = (stage === 1 ? 10 : 11.5) * s;
+    if (mood === 'cheer') {
+      [-1, 1].forEach(function (d) { out.push(path('M' + n(cx + d * gap - er) + ' ' + n(ey + 1) + ' Q' + n(cx + d * gap) + ' ' + n(ey - er * 1.3) + ' ' + n(cx + d * gap + er) + ' ' + n(ey + 1), 'none', ' stroke="' + INK + '" stroke-width="' + n(2.6 * s) + '" stroke-linecap="round"')); });
+      out.push(path('M' + n(cx - 7 * s) + ' ' + n(cy + 6 * s) + ' Q' + n(cx) + ' ' + n(cy + 17 * s) + ' ' + n(cx + 7 * s) + ' ' + n(cy + 6 * s) + ' Z', '#7b2c3b'));
+      out.push(ell(cx, cy + 11.5 * s, 3.6 * s, 2.2 * s, '#ff8fa3'));
+    } else {
+      [-1, 1].forEach(function (d) {
+        out.push(circ(cx + d * gap, ey, er, '#ffffff'), circ(cx + d * gap + 0.6 * s, ey + 0.8 * s, er * 0.62, INK), circ(cx + d * gap + 2 * s, ey - 1.6 * s, er * 0.24, '#ffffff'));
+      });
+      out.push(path('M' + n(cx - 6 * s) + ' ' + n(cy + 7 * s) + ' Q' + n(cx) + ' ' + n(cy + 12.5 * s) + ' ' + n(cx + 6 * s) + ' ' + n(cy + 7 * s), 'none', ' stroke="' + INK + '" stroke-width="' + n(2.3 * s) + '" stroke-linecap="round"'));
+    }
+    if (stage >= 3) { out.push(ell(cx - 17 * s, cy + 5 * s, 4.6 * s, 3 * s, '#ff6f8f', ' opacity=".45"'), ell(cx + 17 * s, cy + 5 * s, 4.6 * s, 3 * s, '#ff6f8f', ' opacity=".45"')); }
+    return out.join('');
+  }
+  function sparkle(x, y, r, fill) {
+    return path('M' + n(x) + ' ' + n(y - r) + ' Q' + n(x + r * 0.18) + ' ' + n(y - r * 0.18) + ' ' + n(x + r) + ' ' + n(y) + ' Q' + n(x + r * 0.18) + ' ' + n(y + r * 0.18) + ' ' + n(x) + ' ' + n(y + r) +
+      ' Q' + n(x - r * 0.18) + ' ' + n(y + r * 0.18) + ' ' + n(x - r) + ' ' + n(y) + ' Q' + n(x - r * 0.18) + ' ' + n(y - r * 0.18) + ' ' + n(x) + ' ' + n(y - r) + ' Z', fill);
+  }
+
+  /* opts: {creature, stage (0-5), mood: 'happy'|'cheer', label, uid (unique per page), crack (0-1: how cracked an egg is)} */
+  function creatureSvg(opts) {
+    opts = opts || {};
+    var p = creatureParts(opts.creature), c = COLOURS.filter(function (x) { return x[0] === p.colour; })[0];
+    var stage = Math.max(0, Math.min(5, Math.floor(Number(opts.stage) || 0))), uid = String(opts.uid || 'c').replace(/[^A-Za-z0-9_-]/g, '');
+    var label = String(opts.label || '').replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; });
+    var out = ['<svg class="pc-creature pc-stage-' + stage + '" viewBox="0 0 120 120" role="img"' + (label ? ' aria-label="' + label + '"' : ' aria-hidden="true"') + ' focusable="false">'];
+    if (stage >= 5) {
+      out.push('<defs><radialGradient id="pc-aura-' + uid + '"><stop offset="0" stop-color="#ffe27a" stop-opacity=".85"/><stop offset=".55" stop-color="#ffd23f" stop-opacity=".35"/><stop offset="1" stop-color="#ffd23f" stop-opacity="0"/></radialGradient></defs>');
+      out.push(circ(60, 62, 58, 'url(#pc-aura-' + uid + ')'));
+    }
+    out.push(ell(60, 110, stage === 0 ? 20 : 27, 4.5, '#000000', ' opacity=".12"'));
+    if (stage === 0) {
+      var egg = function (fill, extra) { return ell(60, 70, 27, 34, fill, extra); };
+      out.push(egg('#ffffff', ' stroke="#ffffff" stroke-width="9"'), egg(c[3]));
+      out.push(circ(48, 58, 5.5, c[1]), circ(70, 76, 7, c[1]), circ(57, 88, 4, c[1]), circ(72, 55, 3.5, c[1]));
+      out.push(ell(50, 50, 5, 9, '#ffffff', ' opacity=".7"' + rot(-25, 50, 50)));
+      if (Number(opts.crack) >= 0.6) out.push(path('M38 66 L46 61 L52 68 L60 60 L67 68 L74 61 L82 66', 'none', ' stroke="' + INK + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" opacity=".7"'));
+      out.push('</svg>');
+      return out.join('');
+    }
+    var s = [0, 0.7, 0.84, 0.94, 1, 1][stage];
+    var g = { s: s, cx: 60, cy: 104 - 30 * s - (stage >= 2 ? 6 * s : 0), rx: 33 * s, ry: 29 * s };
+    if (p.species === 'drop') g.ry = 27 * s;
+    var white = function () { return '#ffffff'; };
+    var paint = function (role) { return role === 'shade' ? c[2] : role === 'leaf' ? '#58c069' : role === 'stem' ? '#3f9a50' : role === 'crown' ? '#ffcd2e' : role === 'wing' ? '#ffffff' : role === 'horn' ? '#fff1c2' : c[1]; };
+    out.push('<g stroke="#ffffff" stroke-width="' + n(7 * Math.max(0.8, s)) + '" stroke-linejoin="round">' + silhouette(p.species, stage, g, white) + '</g>');
+    out.push(silhouette(p.species, stage, g, paint));
+    if (stage >= 4) { // wing feathers
+      out.push(ell(g.cx - g.rx - 5 * s, g.cy - 8 * s, 8 * s, 3.5 * s, c[3], rot(-28, g.cx - g.rx - 5 * s, g.cy - 8 * s)), ell(g.cx + g.rx + 5 * s, g.cy - 8 * s, 8 * s, 3.5 * s, c[3], rot(28, g.cx + g.rx + 5 * s, g.cy - 8 * s)));
+    }
+    if (p.species === 'bun') {
+      var earH = stage === 1 ? 9 : 19;
+      out.push(ell(g.cx - 11 * s, g.cy - g.ry - earH * s * 0.55, 3.4 * s, earH * s * 0.68, c[3], rot(-10, g.cx - 11 * s, g.cy - g.ry)), ell(g.cx + 11 * s, g.cy - g.ry - earH * s * 0.55, 3.4 * s, earH * s * 0.68, c[3], rot(10, g.cx + 11 * s, g.cy - g.ry)));
+    }
+    if (p.species === 'kitty') [-1, 1].forEach(function (d) { out.push(path('M' + n(g.cx + d * 18 * s) + ' ' + n(g.cy - g.ry * 0.62) + ' L' + n(g.cx + d * 15.5 * s) + ' ' + n(g.cy - g.ry - 7 * s) + ' L' + n(g.cx + d * 8 * s) + ' ' + n(g.cy - g.ry * 0.9) + ' Z', c[3])); });
+    if (stage >= 3) out.push(ell(g.cx, g.cy + 12 * s, 15 * s, 10.5 * s, c[3])); // belly
+    out.push(ell(g.cx - 13 * s, g.cy - 15 * s, 6 * s, 3.5 * s, '#ffffff', ' opacity=".55"' + rot(-30, g.cx - 13 * s, g.cy - 15 * s))); // shine
+    out.push(face(stage, g, opts.mood === 'cheer' ? 'cheer' : 'happy', c));
+    if (p.species === 'kitty') [-1, 1].forEach(function (d) { [-2.5, 2.5].forEach(function (dy) { out.push(path('M' + n(g.cx + d * 9 * s) + ' ' + n(g.cy + 8 * s + dy * s * 0.4) + ' L' + n(g.cx + d * 24 * s) + ' ' + n(g.cy + 6 * s + dy * s), 'none', ' stroke="' + INK + '" stroke-width="' + n(1.3 * s) + '" stroke-linecap="round" opacity=".45"')); }); });
+    if (stage >= 5) out.push(circ(60, g.cy - g.ry - crownLift(p.species) * s - 0.5, 2.6, '#ff6f8f'));
+    if (stage >= 4) out.push(sparkle(17, 26, 6, '#ffcd2e'), sparkle(103, 20, 4.5, '#ffcd2e'));
+    if (stage >= 5) out.push(sparkle(104, 66, 5, '#ffffff'), sparkle(14, 74, 4, '#ffffff'));
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  /* The class goal as a marble jar: one marble per share of the target, in the creatures' colours, filling from the bottom.
+   * Every value in it is a number or a colour from the list above. */
+  var JAR_SLOTS = (function () {
+    var slots = [], row = 0;
+    for (var y = 121; y >= 47; y -= 9.2, row++) {
+      var odd = row % 2, x0 = odd ? 31.5 : 26, count = odd ? 6 : 7;
+      for (var i = 0; i < count; i++) slots.push([x0 + i * 11, y]);
+    }
+    return slots;
+  })();
+  function jarSvg(progress, target, uid) {
+    var id = String(uid || 'jar').replace(/[^A-Za-z0-9_-]/g, ''), goal = Math.max(1, Number(target) || 1), have = Math.max(0, Number(progress) || 0);
+    var full = have >= goal, filled = full ? JAR_SLOTS.length : Math.min(JAR_SLOTS.length - 1, Math.round(JAR_SLOTS.length * have / goal));
+    var body = 'M30 30 L90 30 L90 38 Q102 42 102 56 L102 116 Q102 132 86 132 L34 132 Q18 132 18 116 L18 56 Q18 42 30 38 Z';
+    var out = ['<svg class="pc-jar' + (full ? ' pc-jar-full' : '') + '" viewBox="0 0 120 140" aria-hidden="true" focusable="false"><defs><clipPath id="pc-jarclip-' + id + '"><path d="' + body + '"/></clipPath></defs>'];
+    out.push(path(body, '#ffffff', ' opacity=".55"'));
+    out.push('<g clip-path="url(#pc-jarclip-' + id + ')">');
+    for (var i = 0; i < filled; i++) {
+      var s = JAR_SLOTS[i], col = COLOURS[(i * 5) % COLOURS.length];
+      out.push(circ(s[0], s[1], 5.6, col[1]), circ(s[0] - 1.8, s[1] - 1.9, 1.7, '#ffffff', ' opacity=".75"'));
+    }
+    out.push('</g>');
+    out.push(path(body, 'none', ' stroke="#8fb0d8" stroke-width="3" stroke-linejoin="round"'));
+    out.push(path('M27 52 Q25 84 28 112', 'none', ' stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity=".8"'));
+    out.push('<g' + (full ? ' transform="rotate(-14 30 24)"' : '') + '>' + '<rect x="24" y="16" width="72" height="16" rx="5" fill="#ff8a7a"/><rect x="24" y="22" width="72" height="4" fill="#de6456" opacity=".6"/></g>');
+    if (full) out.push(sparkle(100, 14, 7, '#ffcd2e'), sparkle(12, 40, 5, '#ffcd2e'), sparkle(108, 46, 4, '#ffcd2e'));
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  /* ---------- Names, lists and checks shared by the pages and the server ---------- */
+  function cleanName(text) { return String(text == null ? '' : text).replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24); }
+  /* The name a class sees: the first word, unless two pupils share it, then the first word and the next initial. */
+  function shortNames(fullNames) {
+    var first = fullNames.map(function (f) { var w = cleanName(f).split(' '); return { first: w[0] || '', rest: w.slice(1).join(' ') }; });
+    return first.map(function (x, i) {
+      var clash = first.some(function (y, j) { return j !== i && y.first.toLowerCase() === x.first.toLowerCase(); });
+      return clash && x.rest ? x.first + ' ' + x.rest.charAt(0).toUpperCase() + '.' : x.first;
+    });
+  }
+  function byName(list) {
+    return (list || []).slice().sort(function (a, b) {
+      var x = String(a.name || '').toLowerCase(), y = String(b.name || '').toLowerCase();
+      return x < y ? -1 : x > y ? 1 : String(a.studentId || '').localeCompare(String(b.studentId || ''));
+    });
+  }
+  function signed(points) { var v = Number(points) || 0; return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v); }
+  function validIcon(icon) { return ICONS.indexOf(String(icon || '')) >= 0; }
+  function defaultBehaviours() { return DEFAULT_BEHAVIOURS.map(function (b, i) { return { label: b[0], points: b[1], icon: b[2], order: i }; }); }
+  /* True when the active buttons are exactly the examples an earlier version made, unchanged. */
+  function isExampleSet(list) {
+    var active = (list || []).filter(function (b) { return b && b.active !== false; });
+    if (active.length !== DEFAULT_BEHAVIOURS.length) return false;
+    return DEFAULT_BEHAVIOURS.every(function (d) { return active.some(function (b) { return String(b.label) === d[0] && Number(b.points) === d[1] && String(b.icon) === d[2]; }); });
+  }
+  function word(count) { return Math.abs(Number(count) || 0) === 1 ? CURRENCY.one : CURRENCY.many; }
+  function sparks(count) { return String(count) + ' ' + word(count); }
+
+  /* ---------- SPARKADE companions (the owner's look book and his rules of 28 October 2026) ----------
+   * One companion per pupil, chosen as an egg in class once the pupil has EGG_MARK Sparkles to spend (the egg is free),
+   * hatched by the teacher in class. Five stages, one every 25 Sparkles of the wallet (Sparkles earned minus spent):
+   * every attained mark takes effect at the next Seoul midnight (owner decision, 29 October). Spending, penalties and
+   * Undo never remove attained marks. The immutable award/purchase ledger, including correction times, is the history;
+   * no scheduled job, balance conversion or new progress store is needed. Pre-hatch peaks are not converted to growth. */
+  var SPARKADE = (function () {
+    var COMPANIONS = [
+      { id: 'dragon', name: 'Prism Dragon', stages: ['Hatchling', 'Young', 'Skywing', 'Guardian', 'Mythic'], colour: '#4fc1b5', shade: '#2a7f84' },
+      { id: 'wolf', name: 'Stormwolf', stages: ['Cub', 'Young', 'Runner', 'Guardian', 'Storm Alpha'], colour: '#6fd2d8', shade: '#3b5a8f' },
+      { id: 'sunbird', name: 'Sunbird', stages: ['Chick', 'Young', 'Flarewing', 'Guardian', 'Phoenix'], colour: '#ff9a5c', shade: '#c9502f' },
+      { id: 'otter', name: 'Tide Otter', stages: ['Pup', 'Young', 'Wavecrest', 'Guardian', 'Tidecaller'], colour: '#5aa7ff', shade: '#2d5fb8' },
+      { id: 'grove', name: 'Groveback', stages: ['Sprout', 'Young', 'Mossback', 'Guardian', 'Ancient Grove'], colour: '#9ccf7a', shade: '#5e8f4a' }
+    ];
+    var EGG_MARK = 10, MARKS = [0, 25, 50, 75, 100], SEOUL = 9 * 3600000, DAY = 86400000;
+    function companion(id) { for (var i = 0; i < COMPANIONS.length; i++) if (COMPANIONS[i].id === String(id || '')) return COMPANIONS[i]; return null; }
+    function stageFor(balance) { var b = Number(balance) || 0, s = 1; for (var i = 1; i < MARKS.length; i++) if (b >= MARKS[i]) s = i + 1; return s; }
+    function nextMark(balance) { var b = Number(balance) || 0; for (var i = 1; i < MARKS.length; i++) if (b < MARKS[i]) return MARKS[i]; return null; }
+    function iso(v) { var t = Date.parse(String(v || '')); return isFinite(t) ? new Date(t).toISOString() : ''; }
+    /* The next Seoul midnight strictly after ms. A mark reached exactly at midnight waits until the next night. */
+    function midnightAfter(ms) { return Math.floor((ms + SEOUL) / DAY + 1) * DAY - SEOUL; }
+    /* {hatchedAt, awards: [{at, points, undone}], purchases: [{at, price, undone}], now (ms)} → the stage today and whether it
+     * grew last night or grows tonight. Stage 0 until hatched. */
+    function growth(opts) {
+      opts = opts || {};
+      var hatched = Date.parse(String(opts.hatchedAt || '')), now = Number(opts.now) || Date.now();
+      var events = [];
+      function entry(row, amount) {
+        if (!row) return;
+        var at = Date.parse(String(row.at || '')), undo = Date.parse(String(row.undoneAt || ''));
+        if (!isFinite(at)) return;
+        // Legacy undone rows without a correction date cannot establish a historical crossing safely.
+        if (row.undone && (!isFinite(undo) || undo < at)) return;
+        events.push({t: at, n: amount});
+        if (row.undone) events.push({t: undo, n: -amount});
+      }
+      (opts.awards || []).forEach(function (a) { entry(a, Number(a && a.points) || 0); });
+      (opts.purchases || []).forEach(function (p) { entry(p, -(Number(p && p.price) || 0)); });
+      events.sort(function (a, b) { return a.t - b.t; });
+      var balance = 0, i = 0, due = [hatched], active = isFinite(hatched) && hatched <= now;
+      function attain(at) {
+        if (!active || at < hatched) return;
+        for (var mark = 1; mark < MARKS.length; mark++) {
+          if (!due[mark] && balance >= MARKS[mark]) due[mark] = midnightAfter(at);
+        }
+      }
+      // First establish the actual wallet at hatch, never a previous lifetime maximum.
+      for (; i < events.length && events[i].t <= Math.min(hatched, now); i++) balance += events[i].n;
+      if (active) attain(hatched);
+      // Stable ledger order also preserves a crossing corrected at the same millisecond.
+      for (; i < events.length && events[i].t <= now; i++) {
+        balance += events[i].n; attain(events[i].t);
+      }
+      if (!active) return {stage: 0, balance: balance, grewLastNight: false, growsTonight: false, tonightStage: 0, nextMark: nextMark(balance)};
+      var stage = 1, tonightStage = 1, lastGrowth = 0, lastNight = midnightAfter(now - DAY);
+      for (var j = 1; j < MARKS.length; j++) if (due[j]) {
+        if (due[j] <= now) { stage = j + 1; lastGrowth = Math.max(lastGrowth, due[j]); }
+        if (due[j] <= midnightAfter(now)) tonightStage = j + 1;
+      }
+      return {stage: stage, balance: balance, grewLastNight: lastGrowth === lastNight, growsTonight: tonightStage > stage,
+        tonightStage: tonightStage, nextMark: stage >= MARKS.length ? null : MARKS[stage]};
+    }
+    /* The text kept in the Students tab, and reading it back (null for anything that is not a companion). */
+    function record(c) { return JSON.stringify({ species: String(c.species), state: c.state === 'pet' ? 'pet' : 'egg', eggAt: iso(c.eggAt), hatchedAt: c.state === 'pet' ? iso(c.hatchedAt) : '' }); }
+    function parse(text) {
+      if (typeof text !== 'string' || text.charAt(0) !== '{' || text.length > 200) return null;
+      var c; try { c = JSON.parse(text); } catch (ignore) { return null; }
+      if (!c || !companion(c.species) || (c.state !== 'egg' && c.state !== 'pet') || !iso(c.eggAt)) return null;
+      if (c.state === 'pet' && !iso(c.hatchedAt)) return null;
+      return { species: String(c.species), state: c.state, eggAt: iso(c.eggAt), hatchedAt: c.state === 'pet' ? iso(c.hatchedAt) : '' };
+    }
+    return { COMPANIONS: COMPANIONS, EGG_MARK: EGG_MARK, MARKS: MARKS, companion: companion, stageFor: stageFor, nextMark: nextMark, growth: growth, record: record, parse: parse, midnightAfter: midnightAfter };
+  })();
+
+  return { SPARKADE: SPARKADE, islandFor: islandFor, ISLAND_STAGES: ISLAND_STAGES, LEVELS: LEVELS, AFTER_TEN: AFTER_TEN, STAGE_NAMES: STAGE_NAMES, SPECIES: SPECIES, COLOURS: COLOURS, ICONS: ICONS,
+    levelFor: levelFor, stageFor: stageFor, totals: totals, goalProgress: goalProgress, creatureParts: creatureParts, validCreature: validCreature,
+    creatureFor: creatureFor, speciesName: speciesName, creatureSvg: creatureSvg, jarSvg: jarSvg, JAR_SLOTS: JAR_SLOTS.length, cleanName: cleanName, shortNames: shortNames, byName: byName,
+    signed: signed, validIcon: validIcon, defaultBehaviours: defaultBehaviours, isExampleSet: isExampleSet, CURRENCY: CURRENCY, IDEAS: IDEAS, word: word, sparks: sparks };
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = PointsCore;
+
+
+/* SPARKADE painted avatar, starter catalogue (approved for launch, 29 October 2026).
+ * Owner selected the existing 45-combination, teacher-applied maker for launch. The legacy nine-digit Avatar,
+ * Wear and purchases stay intact. A missing AvatarV2 gets a display-only mapping; reading never migrates a row.
+ * Every painted part uses the same 1024 x 1024 canvas. Body includes the starter clothes; outfit precedes hair.
+ * The build supplies SP_AVATAR_ART. User records contain fixed IDs only, never image URLs or HTML. */
+var SparkadeAvatar = (function () {
+  'use strict';
+  var CATALOG = {
+    body: [{id: 'body-01', name: 'Light warm beige'}, {id: 'body-02', name: 'Golden medium'}, {id: 'body-03', name: 'Deep warm'}],
+    hair: [{id: 'hair-01', name: 'Swept'}, {id: 'hair-02', name: 'Bob'}, {id: 'hair-03', name: 'Curls'}, {id: 'hair-04', name: 'Ponytail'}, {id: 'hair-00', name: 'No hair'}],
+    outfit: [{id: 'outfit-01', name: 'Starter clothes'}, {id: 'outfit-02', name: 'SPARK jacket'}, {id: 'outfit-03', name: 'Explorer hoodie'}]
+  };
+  var KEYS = ['v', 'body', 'hair', 'outfit'];
+  function has(o, key) { return Object.prototype.hasOwnProperty.call(o, key); }
+  function choice(slot, id) { return typeof id === 'string' && CATALOG[slot].some(function (x) { return x.id === id; }); }
+  function parse(input) {
+    var value = input;
+    if (typeof value === 'string') {
+      if (!value || value.length > 256) return null;
+      try { value = JSON.parse(value); } catch (ignore) { return null; }
+    }
+    if (!value || Object.prototype.toString.call(value) !== '[object Object]' || Object.getOwnPropertyNames(value).length !== KEYS.length || (typeof Object.getOwnPropertySymbols === 'function' && Object.getOwnPropertySymbols(value).length)) return null;
+    if (!KEYS.every(function (key) { return has(value, key) && !!Object.getOwnPropertyDescriptor(value, key) && has(Object.getOwnPropertyDescriptor(value, key), 'value'); })) return null;
+    if (value.v !== 1 || !choice('body', value.body) || !choice('hair', value.hair) || !choice('outfit', value.outfit)) return null;
+    return {v: 1, body: value.body, hair: value.hair, outfit: value.outfit};
+  }
+  function record(input) { var value = parse(input); return value ? JSON.stringify(value) : ''; }
+  function fromLegacy(code, seed) {
+    // Explicit approximation of the old skin/hair fields. Old height, dyes and merchandise are not overwritten.
+    // seed is accepted for the shared call signature; the new unsaved starter is deliberately always the same.
+    var value = {v: 1, body: 'body-01', hair: 'hair-01', outfit: 'outfit-01'}, text = String(code == null ? '' : code);
+    var limits = [3, 6, 10, 10, 4, 3, 3, 4, 3];
+    if (!/^\d{9}$/.test(text) || limits.some(function (limit, i) { return Number(text.charAt(i)) >= limit; })) return value;
+    value.body = ['body-01', 'body-01', 'body-02', 'body-02', 'body-03', 'body-03'][Number(text.charAt(1))];
+    value.hair = ['hair-01', 'hair-01', 'hair-03', 'hair-01', 'hair-01', 'hair-02', 'hair-02', 'hair-04', 'hair-04', 'hair-04'][Number(text.charAt(2))];
+    return value;
+  }
+  function resolve(input, legacy, seed) { return parse(input) || fromLegacy(legacy, seed); }
+  function code(input) { var value = parse(input); return value ? 'SA1-B' + value.body.slice(-2) + '-H' + value.hair.slice(-2) + '-O' + value.outfit.slice(-2) : ''; }
+  function fromCode(text) {
+    if (typeof text !== 'string') return null;
+    var parts = /^SA1-B(\d{2})-H(\d{2})-O(\d{2})$/.exec(text.trim());
+    return parts ? parse({v: 1, body: 'body-' + parts[1], hair: 'hair-' + parts[2], outfit: 'outfit-' + parts[3]}) : null;
+  }
+  function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]; }); }
+  function source(map, id) {
+    if (!map || !has(map, id) || typeof map[id] !== 'string') return '';
+    var value = map[id];
+    // Only build-provided raster data or relative asset paths. No remote hosts, SVG, query strings or traversal.
+    return /^(?:data:image\/(?:webp|png);base64,[A-Za-z0-9+/]+={0,2}|(?:\.\/)?(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.(?:webp|png))$/.test(value) ? value : '';
+  }
+  function svg(opts, artMap) {
+    opts = opts || {};
+    var value = resolve(opts.avatarV2, opts.look, opts.seed || opts.uid), map = artMap || (typeof SP_AVATAR_ART === 'object' && SP_AVATAR_ART ? SP_AVATAR_ART : {});
+    var label = opts.label == null ? 'SPARKADE avatar' : opts.label;
+    var out = ['<svg class="pa-avatar sp-painted-avatar" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img"' + (label ? ' aria-label="' + esc(label) + '"' : ' aria-hidden="true"') + ' focusable="false">'];
+    var layers = [value.body];
+    if (value.outfit !== 'outfit-01') layers.push(value.outfit);
+    if (value.hair !== 'hair-00') layers.push(value.hair);
+    layers.forEach(function (id) {
+      var src = source(map, id);
+      if (src) out.push('<image data-part="' + id + '" href="' + esc(src) + '" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid meet"/>');
+    });
+    if (!source(map, value.body)) out.push('<text x="512" y="512" text-anchor="middle" font-family="sans-serif" font-size="42" fill="#FFFFFF">Avatar picture unavailable</text>');
+    out.push('</svg>');
+    return out.join('');
+  }
+  return {CATALOG: CATALOG, parse: parse, record: record, fromLegacy: fromLegacy, resolve: resolve, code: code, fromCode: fromCode, svg: svg};
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAvatar;
+
+var SP_AVATAR_ART = {"body-01":"avatar/body-01.webp","body-02":"avatar/body-02.webp","body-03":"avatar/body-03.webp","hair-01":"avatar/hair-01.webp","hair-02":"avatar/hair-02.webp","hair-03":"avatar/hair-03.webp","hair-04":"avatar/hair-04.webp","outfit-02":"avatar/outfit-02.webp","outfit-03":"avatar/outfit-03.webp"};
+</script>
+<script>
+var SP_KEY = new URLSearchParams(location.search).get("points") || "";
+window.SP_GATEWAY = "https://script.google.com/macros/s/AKfycbz_yisUT04XOY23wQSd2Yzps9EfkE6C_W73QTh2XydzSyRlLQTlm4tEeS9GW5IVWOuK/exec";
+var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","dragon-egg":"art/dragon-egg.webp","dragon-1":"art/dragon-1.webp","dragon-2":"art/dragon-2.webp","dragon-3":"art/dragon-3.webp","dragon-4":"art/dragon-4.webp","dragon-5":"art/dragon-5.webp","wolf-egg":"art/wolf-egg.webp","wolf-1":"art/wolf-1.webp","wolf-2":"art/wolf-2.webp","wolf-3":"art/wolf-3.webp","wolf-4":"art/wolf-4.webp","wolf-5":"art/wolf-5.webp","sunbird-egg":"art/sunbird-egg.webp","sunbird-1":"art/sunbird-1.webp","sunbird-2":"art/sunbird-2.webp","sunbird-3":"art/sunbird-3.webp","sunbird-4":"art/sunbird-4.webp","sunbird-5":"art/sunbird-5.webp","otter-egg":"art/otter-egg.webp","otter-1":"art/otter-1.webp","otter-2":"art/otter-2.webp","otter-3":"art/otter-3.webp","otter-4":"art/otter-4.webp","otter-5":"art/otter-5.webp","grove-egg":"art/grove-egg.webp","grove-1":"art/grove-1.webp","grove-2":"art/grove-2.webp","grove-3":"art/grove-3.webp","grove-4":"art/grove-4.webp","grove-5":"art/grove-5.webp"};
+/* SPARKADE, the pupils' page (the owner's look book, docs/design/sparkade/): the castle, one companion that starts as an
+ * egg the teacher hatches in class and grows night by night with the Sparkles the pupil has, the class, and the next
+ * learning goal. The class link and PIN use the existing signed student session. Only class, sign-in and board reads reach
+ * the server. Care (pet, water, snack, walk) is a short visual reaction held in this page only; it never changes Sparkles,
+ * growth, ownership or anything saved. Pictures come from SP_ART (the look book art the build embeds); a stage with no
+ * picture yet is drawn as a marked stand-in, never as another companion's picture. */
+(function () {
+  'use strict';
+  var P = PointsCore, V = typeof SparkadeAvatar !== 'undefined' ? SparkadeAvatar : null, K = P.SPARKADE, KEY = typeof SP_KEY === 'string' ? SP_KEY : '', ART = typeof SP_ART === 'object' && SP_ART ? SP_ART : {};
+  var app = document.getElementById('sp-app'), live = document.getElementById('sp-live');
+  var STORE = 'spark-points-' + KEY, WORD = P.CURRENCY.many, device = null, timings = [];
+  var S = {roster: null, board: null, pin: '', picked: null, loadedAt: 0, busy: false, request: 0, pinKeys: null, careTimer: 0, preview: '', avatarDraft: null, avatarOwner: '', avatarCodeShown: false};
+
+  function h(tag, attrs) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k]; if (v == null || v === false) return;
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else if (k === 'html') n.innerHTML = v;
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? '' : v);
+    });
+    for (var i = 2; i < arguments.length; i++) add(n, arguments[i]);
+    return n;
+  }
+  function add(n, kid) { if (kid == null || kid === false) return; if (Array.isArray(kid)) kid.forEach(function (k) { add(n, k); }); else n.append(kid.nodeType ? kid : document.createTextNode(String(kid))); }
+  function saved() {
+    if (device !== null) return device;
+    try { var raw = JSON.parse(window.localStorage.getItem(STORE) || '{}'); device = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}; }
+    catch (e) { device = {}; }
+    return device;
+  }
+  function save(value) { device = value; try { window.localStorage.setItem(STORE, JSON.stringify(value)); } catch (e) { /* The signed session still works for this visit. */ } }
+  function reduceMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+  function plural(n, one, many) { return n + ' ' + (Math.abs(n) === 1 ? one : many); }
+  function day(iso) { try { return new Date(iso).toLocaleDateString('en-US', {weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Seoul'}); } catch (e) { return ''; } }
+  function say(text) { live.textContent = text; }
+  function focus(el) { try { if (el) el.focus({preventScroll: true}); } catch (e) {} }
+  function pic(opts) { return V.svg(opts); }
+  function esc(text) { return String(text == null ? '' : text).replace(/[&<>"]/g, function (ch) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]; }); }
+  function art(name) { return typeof ART[name] === 'string' && /^(data:image\/webp;base64,[A-Za-z0-9+/=]+|[A-Za-z0-9_./-]+\.webp)$/.test(ART[name]) ? ART[name] : ''; }
+  function img(name, alt, cls) { var src = art(name); return src ? h('img', {class: cls || '', src: src, alt: alt || '', draggable: 'false', loading: name === 'castle' ? 'eager' : 'lazy', decoding: 'async'}) : null; }
+  function kindOf(species) { return K.companion(species) || K.COMPANIONS[0]; }
+
+  /* ---------- companion pictures: the look book art where it exists, a marked stand-in where it does not ---------- */
+  function standIn(kind, label, egg, uid) {
+    var id = 'sp-g' + String(uid || 'x').replace(/[^A-Za-z0-9_-]/g, ''), c = kind.colour, d = kind.shade;
+    var body = egg ? '<path d="M60 14 C33 14 20 48 20 70 C20 94 38 108 60 108 C82 108 100 94 100 70 C100 48 87 14 60 14 Z" fill="url(#' + id + ')"/>' +
+        '<ellipse cx="46" cy="44" rx="7" ry="12" fill="#ffffff" opacity=".35" transform="rotate(-22 46 44)"/><circle cx="72" cy="60" r="4" fill="' + d + '" opacity=".35"/><circle cx="52" cy="84" r="5" fill="' + d + '" opacity=".3"/><circle cx="76" cy="88" r="3" fill="' + d + '" opacity=".3"/>'
+      : '<circle cx="60" cy="62" r="40" fill="url(#' + id + ')"/><path d="M60 30 L65 50 L85 54 L65 60 L60 82 L55 60 L35 54 L55 50 Z" fill="#fff6e6" opacity=".9"/>';
+    return '<svg class="sp-standin" viewBox="0 0 120 120" role="img" aria-label="' + esc(label) + '" focusable="false"><defs><radialGradient id="' + id + '" cx="35%" cy="25%" r="80%"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset=".35" stop-color="' + c + '"/><stop offset="1" stop-color="' + d + '"/></radialGradient></defs>' +
+      '<ellipse cx="60" cy="110" rx="34" ry="5" fill="#000" opacity=".25"/>' + body +
+      '<path d="M18 22 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="#F2D49A"/><path d="M100 28 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 Z" fill="#F2D49A"/></svg>';
+  }
+  /* The picture of a companion at a stage (1-5), or its egg (stage 0). */
+  function companionArt(species, stage, uid) {
+    var kind = kindOf(species), label = stage ? kind.name + ', ' + kind.stages[stage - 1] : kind.name + ' egg';
+    var picture = img(kind.id + '-' + (stage || 'egg'), label, 'sp-cimg');
+    if (picture) return h('span', {class: 'sp-cart sp-cart-pic'}, picture);
+    return h('span', {class: 'sp-cart sp-cart-standin'}, h('span', {class: 'sp-cart-glow', html: standIn(kind, label, !stage, uid)}),
+      h('span', {class: 'sp-cart-tag', text: stage ? 'Picture coming' : 'Egg picture coming'}));
+  }
+
+  // This transport deliberately has no staff adapter or Google identity module. The signed
+  // student session belongs inside payload, not the gateway's separate staff-session field.
+  var READS = {portalPointsStudentClass: 'class-read', portalPointsStudentSignIn: 'sign-in', portalPointsStudentBoard: 'class-read'};
+  function run(name, payload, retry) {
+    if (!READS[name]) return Promise.reject(new Error('Unavailable action'));
+    var started = Date.now();
+    retry = retry || {attempt: 0, deadline: started + 90000, request: S.request};
+    if (retry.request !== S.request) return Promise.reject(new Error('cancelled'));
+    if (started >= retry.deadline) return Promise.reject(new Error('timeout'));
+    var task = new Promise(function (resolve, reject) {
+      var controller = typeof AbortController === 'function' ? new AbortController() : null, finished = false;
+      var timer = setTimeout(function () { finish(new Error('timeout')); if (controller) controller.abort(); }, retry.deadline - started);
+      function finish(error, value) { if (finished) return; finished = true; clearTimeout(timer); if (error) reject(error); else resolve(value); }
+      if (typeof window.SP_GATEWAY === 'string' && window.SP_GATEWAY) {
+        fetch(window.SP_GATEWAY, {method: 'POST', mode: 'cors', credentials: 'omit', redirect: 'follow', cache: 'no-store', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({v: 1, name: name, payload: payload}), signal: controller ? controller.signal : undefined})
+          .then(function (response) { if (response.ok === false) throw new Error('connection'); return response.json(); })
+          .then(function (answer) { if (!answer || answer.ok !== true) throw new Error('response'); finish(null, answer.result); })
+          .catch(function (error) { finish(error); });
+      } else if (window.google && google.script && google.script.run) {
+        google.script.run.withSuccessHandler(function (value) { finish(null, value); }).withFailureHandler(function () { finish(new Error('connection')); })[name](payload);
+      } else finish(new Error('offline'));
+    });
+    function record(status) { timings.push({category: READS[name], durationMs: Math.max(0, Date.now() - started), status: status}); if (timings.length > 60) timings.shift(); }
+    return task.then(function (value) {
+      record(value && value.ok ? 'ok' : 'refused');
+      if (value && value.reason === 'busy' && name !== 'portalPointsStudentSignIn' && retry.attempt < 11) {
+        if (retry.request !== S.request) throw new Error('cancelled');
+        var remaining = retry.deadline - Date.now();
+        if (remaining <= 1) return value;
+        var pauses = [1000, 2000, 4000, 6000, 8000];
+        var pause = Math.min(remaining - 1, Math.round(pauses[Math.min(retry.attempt, pauses.length - 1)] * (0.8 + Math.random() * 0.4)));
+        return new Promise(function (resolve) { setTimeout(resolve, pause); }).then(function () {
+          return run(name, payload, {attempt: retry.attempt + 1, deadline: retry.deadline, request: retry.request});
+        });
+      }
+      return value;
+    }, function (error) { record(error.message === 'timeout' ? 'timeout' : 'error'); throw error; });
+  }
+  window.spDiagnostics = function () { return timings.map(function (entry) { return {category: entry.category, durationMs: entry.durationMs, status: entry.status}; }); };
+  function screen() {
+    if (S.pinKeys) { document.removeEventListener('keydown', S.pinKeys); S.pinKeys = null; }
+    if (S.careTimer) { clearTimeout(S.careTimer); S.careTimer = 0; }
+    app.replaceChildren.apply(app, Array.prototype.filter.call(arguments, function (x) { return x != null; })); window.scrollTo(0, 0);
+  }
+  function problem(text, again) { screen(top(), h('section', {class: 'sp-card sp-problem', role: 'alert'}, h('p', {class: 'sp-big', text: 'One moment.'}), h('p', {text: text}), again ? h('button', {type: 'button', class: 'sp-btn', onclick: again}, 'Try again') : null)); }
+  var OFFLINE = 'SPARKADE could not be reached. Check the internet connection, then try again.';
+  var RESTING = 'SPARKADE is busy right now. Try again in a few minutes.';
+  function wordmark() { return img('wordmark', 'SPARKADE', 'sp-wordmark') || h('span', {class: 'sp-brand'}, h('span', {class: 'sp-brand-star', 'aria-hidden': 'true', text: '✦'}), ' SPARKADE'); }
+  function top(left, right) {
+    return h('header', {class: 'sp-top'}, left || wordmark(), h('span', {class: 'sp-top-right'}, right || null,
+      h('span', {class: 'sp-class', text: (S.board && S.board.className) || (S.roster && S.roster.className) || ''})));
+  }
+  function sparklesChip(n) { return h('span', {class: 'sp-chip', 'aria-label': P.sparks(n)}, h('span', {class: 'sp-chip-star', 'aria-hidden': 'true', text: '✦'}), h('span', {class: 'sp-chip-num', text: String(n)})); }
+
+  /* ---------- 1. Who are you? ---------- */
+  function start() {
+    if (!KEY) { problem('This link is not complete. Open the class link your teacher sent, or ask your teacher for it.'); return; }
+    var mine = saved();
+    if (mine.session) { loadBoard(); return; }
+    loadRoster();
+  }
+  function loadRoster() {
+    screen(top(), h('div', {class: 'sp-card sp-wait', role: 'status'}, h('p', {text: 'Opening your class…'})));
+    var request = ++S.request;
+    run('portalPointsStudentClass', {key: KEY}).then(function (r) {
+      if (request !== S.request) return;
+      if (r && (r.reason === 'unavailable' || r.reason === 'busy')) { problem(RESTING, loadRoster); return; }
+      if (!r || !r.ok) { problem('This class link no longer works. Ask your teacher for the new link.'); return; }
+      S.roster = r; pickName();
+    }).catch(function () { if (request === S.request) problem(OFFLINE, loadRoster); });
+  }
+  function pickName() {
+    ++S.request; S.busy = false; S.pin = ''; clearAvatarDraft();
+    var r = S.roster;
+    screen(top(),
+      h('section', {class: 'sp-pick'}, h('h1', {class: 'sp-title', text: 'Who are you?'}), h('p', {class: 'sp-lead', text: 'Tap your name.'}),
+        h('div', {class: 'sp-names'}, r.students.map(function (s, i) {
+          return h('button', {type: 'button', class: 'sp-name', onclick: function () { S.picked = s; S.pin = ''; pinPad(); }},
+            h('span', {class: 'sp-name-art', html: pic({avatarV2: s.avatarV2, look: s.look, seed: s.studentId, wear: s.wear, uid: 'n' + i})}), h('span', {class: 'sp-name-text', text: s.name}));
+        }))));
+    focus(app.querySelector('.sp-name'));
+  }
+
+  /* ---------- 2. Your PIN ---------- */
+  function pinPad(note) {
+    var s = S.picked, dots = h('div', {class: 'sp-dots', 'aria-hidden': 'true'}), msg = h('p', {class: 'sp-pin-msg', role: 'status', text: note || ''});
+    var draw = function () { dots.replaceChildren.apply(dots, [0, 1, 2, 3].map(function (i) { return h('span', {class: 'sp-dot' + (i < S.pin.length ? ' sp-dot-on' : '')}); })); entry.value = S.pin; };
+    var press = function (d) { if (S.busy) return; if (d === 'back') S.pin = S.pin.slice(0, -1); else if (S.pin.length < 4) S.pin += d; draw(); if (S.pin.length === 4) signIn(msg); };
+    var entry = h('input', {id: 'sp-pin', class: 'sp-sr', type: 'password', inputmode: 'numeric', autocomplete: 'off', maxlength: '4', 'aria-label': 'Your 4-digit PIN',
+      oninput: function (e) { S.pin = String(e.target.value || '').replace(/\D/g, '').slice(0, 4); draw(); if (S.pin.length === 4) signIn(msg); }});
+    var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'].map(function (k) {
+      if (!k) return h('span', {class: 'sp-key-gap'});
+      return h('button', {type: 'button', class: 'sp-key' + (k === 'back' ? ' sp-key-back' : ''), 'aria-label': k === 'back' ? 'Delete' : k, onclick: function () { press(k); }}, k === 'back' ? '⌫' : k);
+    });
+    screen(top(h('button', {type: 'button', class: 'sp-link', onclick: pickName}, '‹ Not ' + s.name + '?')),
+      h('section', {class: 'sp-pin'},
+        h('span', {class: 'sp-pin-art', html: pic({avatarV2: s.avatarV2, look: s.look, seed: s.studentId, wear: s.wear, uid: 'pin'})}),
+        h('h1', {class: 'sp-title', text: 'Hi, ' + s.name + '!'}), h('p', {class: 'sp-lead', text: 'Type your PIN.'}),
+        h('label', {class: 'sp-sr', for: 'sp-pin', text: 'Your 4-digit PIN'}), entry, dots, msg, h('div', {class: 'sp-keys'}, keys)));
+    draw();
+    S.pinKeys = pinKeys; document.addEventListener('keydown', pinKeys);
+    function pinKeys(e) {
+      if (!dots.isConnected) { document.removeEventListener('keydown', pinKeys); return; }
+      if (e.target === entry) return;
+      if (/^\d$/.test(e.key)) { e.preventDefault(); press(e.key); } else if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
+    }
+  }
+  function signIn(msg) {
+    if (S.busy) return;
+    S.busy = true; msg.textContent = 'Checking…';
+    var request = ++S.request;
+    run('portalPointsStudentSignIn', {key: KEY, studentId: S.picked.studentId, pin: S.pin}).then(function (r) {
+      if (request !== S.request) return;
+      S.busy = false;
+      if (r && r.ok) { var mine = saved(); mine.session = r.session; mine.studentId = r.studentId; save(mine); S.pin = ''; loadBoard(); return; }
+      S.pin = '';
+      var reason = r && r.reason;
+      if (reason === 'paused') pinPad('Too many wrong tries. Wait 15 minutes, then try again. If you forgot your PIN, ask your teacher.');
+      else if (reason === 'link') problem('This class link no longer works. Ask your teacher for the new link.');
+      else if (reason === 'gone') loadRoster();
+      else if (reason === 'unavailable' || reason === 'busy') pinPad(RESTING);
+      else pinPad('That PIN is not right. ' + (r && r.triesLeft ? plural(r.triesLeft, 'try', 'tries') + ' left.' : 'Try again.'));
+    }).catch(function () { if (request !== S.request) return; S.busy = false; S.pin = ''; pinPad(OFFLINE); });
+  }
+
+  /* ---------- 3. The castle: the saved record comes first; reading never edits it ---------- */
+  function boardStatus(text) { var node = app.querySelector('.sp-board-status'); if (node) node.textContent = text; say(text); }
+  function loadBoard() {
+    var mine = saved(), session = mine.session;
+    if (!session) { loadRoster(); return; }
+    if (S.busy) return;
+    S.busy = true;
+    var request = ++S.request, keepBoard = !!S.board;
+    if (keepBoard) boardStatus('Refreshing…'); else screen(top(), h('div', {class: 'sp-card sp-wait', role: 'status'}, h('p', {text: 'Opening your castle…'})));
+    run('portalPointsStudentBoard', {session: session}).then(function (b) {
+      if (request !== S.request || saved().session !== session) return;
+      S.busy = false;
+      if (b && (b.reason === 'unavailable' || b.reason === 'busy')) { failed(); return; }
+      if (!b || !b.ok) { var m = saved(); delete m.session; save(m); S.board = null; clearAvatarDraft(); loadRoster(); return; }
+      if (S.avatarOwner && S.avatarOwner !== b.me.studentId) clearAvatarDraft();
+      S.board = b; S.loadedAt = Date.now(); drawBoard();
+    }).catch(function () { if (request !== S.request) return; S.busy = false; failed(); });
+    function failed() { if (keepBoard) boardStatus('Could not refresh. These are your last loaded ' + WORD + '. Try Refresh again.'); else problem(OFFLINE, loadBoard); }
+  }
+  function companionOf(me) { var c = me && me.companion; return c && K.companion(c.species) ? c : null; }
+  function stageDots(c) {
+    return h('span', {class: 'sp-stages', role: 'img', 'aria-label': 'Stage ' + c.stage + ' of 5'}, K.MARKS.map(function (m, i) {
+      return h('span', {class: 'sp-stage-dot' + (i < c.stage ? ' sp-stage-on' : ''), title: c.stages[i] + (i ? ' at ' + m + ' ' + WORD : '')});
+    }));
+  }
+  /* The castle card: the castle, the pupil's character and the companion (or egg) in front of it, the name and the Sparkles. */
+  function castleCard(me, gained) {
+    var c = companionOf(me), uid = 'me';
+    return h('section', {class: 'sp-castle'},
+      img('castle', '', 'sp-castle-bg') || h('span', {class: 'sp-castle-bg sp-castle-plain', 'aria-hidden': 'true'}),
+      h('div', {class: 'sp-castle-scene', 'aria-hidden': 'true'},
+        h('span', {class: 'sp-castle-me', html: pic({avatarV2: me.avatarV2, look: me.look, seed: me.studentId, wear: me.wear, tier: me.tier, mood: 'great', uid: uid, label: ''})}),
+        c ? h('span', {class: 'sp-castle-pet' + (c.state === 'egg' ? ' sp-castle-egg' : ''), onclick: function () { wobble(this); }}, companionArt(c.species, c.state === 'pet' ? c.stage : 0, 'castle')) : null),
+      h('div', {class: 'sp-castle-copy'},
+        h('h1', {class: 'sp-me', text: me.name}),
+        h('p', {class: 'sp-points', 'aria-label': 'Wallet: ' + P.sparks(me.balance)}, h('span', {class: 'sp-star', 'aria-hidden': 'true', text: '✦'}), h('span', {class: 'sp-count', text: String(me.balance)}), h('span', {class: 'sp-points-word', text: ' ' + P.word(me.balance) + ' to spend'})),
+        gained > 0 ? h('p', {class: 'sp-gained', text: '+' + gained + ' earned since your last visit!'}) : null,
+        h('p', {class: 'sp-wallet', text: 'Your Sparkles are awarded in class.'})));
+  }
+  function wobble(el) { if (!el || reduceMotion()) return; el.classList.remove('sp-wobble'); void el.offsetWidth; el.classList.add('sp-wobble'); }
+  /* The companion card: the egg to come, the egg, or the hatched companion and how it grows. */
+  function companionCard(me, grewNow) {
+    var c = companionOf(me), kind = c ? kindOf(c.species) : null;
+    if (!c) {
+      var need = Math.max(0, me.eggMark - me.balance), done = Math.min(1, Math.max(0, me.balance / me.eggMark));
+      return h('section', {class: 'sp-card sp-companion sp-companion-none'}, h('h2', {class: 'sp-h2', text: 'Your egg'}),
+        h('div', {class: 'sp-egg-goal'}, h('span', {class: 'sp-egg-goal-art', html: standIn(K.COMPANIONS[0], 'An egg', true, 'goal')}),
+          h('div', {class: 'sp-egg-goal-copy'},
+            h('p', {class: 'sp-strong', text: need ? plural(need, 'more ' + P.CURRENCY.one, 'more ' + WORD) + ' to spend, then you choose your egg.' : 'You can choose your egg! Ask your teacher in class.'}),
+            h('div', {class: 'sp-bar', role: 'progressbar', 'aria-label': 'Progress to the egg', 'aria-valuemin': '0', 'aria-valuemax': String(me.eggMark), 'aria-valuenow': String(Math.min(me.eggMark, Math.max(0, me.balance)))}, h('span', {style: 'width:' + Math.round(done * 100) + '%'})),
+            h('p', {class: 'sp-muted', text: 'The egg is free at ' + me.eggMark + ' ' + WORD + '. You choose it with your teacher in class, and it is yours for good.'}))),
+        meetCompanions());
+    }
+    if (c.state === 'egg') {
+      return h('section', {class: 'sp-card sp-companion sp-companion-egg'}, h('h2', {class: 'sp-h2', text: 'Your ' + kind.name + ' egg'}),
+        h('div', {class: 'sp-crow'}, h('button', {type: 'button', class: 'sp-egg-btn', 'aria-label': 'Look at your egg', onclick: function () { wobble(this); say('Your egg wobbles a little.'); }}, companionArt(c.species, 0, 'egg')),
+          h('div', {class: 'sp-ccopy'}, h('p', {class: 'sp-strong', text: 'Your teacher will hatch it in class.'}),
+            h('p', {class: 'sp-muted', text: 'Then it grows into a ' + kind.stages[0] + ', and on from there: ' + kind.stages.slice(1).join(' · ') + '.'}),
+            h('p', {class: 'sp-muted', text: 'Tap the egg to look at it. Looking is just for fun.'}))));
+    }
+    var next = c.nextMark, toNext = next === null ? 0 : Math.max(0, next - me.balance);
+    return h('section', {class: 'sp-card sp-companion' + (grewNow ? ' sp-grew' : '')},
+      grewNow ? h('p', {class: 'sp-grew-line', role: 'status', text: 'Your ' + kind.name + ' reached ' + c.stageName + ' last night!'}) : null,
+      h('h2', {class: 'sp-h2', text: kind.name + ' · ' + c.stageName}),
+      h('div', {class: 'sp-crow'}, h('button', {type: 'button', class: 'sp-egg-btn', 'aria-label': 'Say hi to your ' + kind.name, onclick: function () { wobble(this); care('Pet'); }}, companionArt(c.species, c.stage, 'pet')),
+        h('div', {class: 'sp-ccopy'}, stageDots(c),
+          c.growsTonight ? h('p', {class: 'sp-strong sp-tonight', text: 'Growing tonight! Tomorrow: ' + kind.stages[(c.tonightStage || c.stage + 1) - 1] + '.'})
+            : next === null ? h('p', {class: 'sp-strong', text: 'Fully grown: ' + c.stageName + '!'})
+              : h('p', {class: 'sp-strong', text: plural(toNext, 'more ' + P.CURRENCY.one, 'more ' + WORD) + ' to spend, then ' + kind.stages[c.stage] + '.'}),
+          h('p', {class: 'sp-muted', text: 'Companions grow the night after you reach ' + K.MARKS.slice(1).join(', ') + ' ' + WORD + '. Spending can delay your next mark. Every mark you reach stays earned.'}))),
+      careRow());
+  }
+  /* The five companions to meet before choosing (look book: Preview every stage before choosing). */
+  function meetCompanions() {
+    var open = S.preview && K.companion(S.preview) ? K.companion(S.preview) : null;
+    return h('div', {class: 'sp-meet'}, h('h3', {class: 'sp-h3', text: 'Meet the companions'}),
+      h('div', {class: 'sp-meet-row', role: 'group', 'aria-label': 'Companions'}, K.COMPANIONS.map(function (kind) {
+        return h('button', {type: 'button', class: 'sp-meet-btn' + (open && open.id === kind.id ? ' sp-meet-on' : ''), 'aria-pressed': open && open.id === kind.id ? 'true' : 'false', onclick: function () { S.preview = open && open.id === kind.id ? '' : kind.id; redrawMeet(); }},
+          companionArt(kind.id, 1, 'meet' + kind.id), h('span', {class: 'sp-meet-name', text: kind.name}));
+      })),
+      open ? h('div', {class: 'sp-meet-open'}, h('p', {class: 'sp-strong', text: open.name + ' grows: ' + open.stages.join(' → ') + '.'}),
+        h('div', {class: 'sp-meet-stages'}, open.stages.map(function (name, i) { return h('span', {class: 'sp-meet-stage'}, companionArt(open.id, i + 1, 'ms' + open.id + i), h('span', {class: 'sp-meet-stage-name', text: name})); }))) : null);
+  }
+  function redrawMeet() { var old = app.querySelector('.sp-meet'); if (old) old.replaceWith(meetCompanions()); }
+  function careRow() {
+    return h('div', {class: 'sp-care'}, h('p', {class: 'sp-care-msg', role: 'status', text: 'Your companion is happy to see you.'}),
+      h('div', {class: 'sp-care-actions'}, ['Pet', 'Water', 'Snack', 'Walk'].map(function (action) { return h('button', {type: 'button', class: 'sp-btn sp-btn-soft', onclick: function () { care(action); }}, action); })),
+      h('p', {class: 'sp-muted', text: 'Just for fun during this visit. Care does not earn or spend ' + WORD + ', or change your companion’s growth.'}));
+  }
+  function historyCard(me) {
+    return h('section', {class: 'sp-card'}, h('h2', {class: 'sp-h2', text: 'My ' + WORD}),
+      me.history.length ? h('ul', {class: 'sp-history'}, me.history.map(function (x) {
+        return h('li', {class: 'sp-hist' + (x.points < 0 ? ' sp-hist-neg' : '')}, h('span', {class: 'sp-hist-icon', 'aria-hidden': 'true', text: x.icon}), h('span', {class: 'sp-hist-label'}, h('strong', {text: x.label}), h('span', {text: day(x.at)})), h('span', {class: 'sp-hist-pts', text: P.signed(x.points)}));
+      })) : h('p', {class: 'sp-muted', text: 'Your teacher’s first award will show up here.'}));
+  }
+  function classCard(b, me) {
+    return h('section', {class: 'sp-card sp-class-board'}, h('h2', {class: 'sp-h2', text: 'My class'}), h('p', {class: 'sp-muted', text: 'Everyone in ' + b.className + ', in name order. Sparkles shown before spending.'}),
+      h('ul', {class: 'sp-stickers'}, b.students.map(function (s, i) {
+        var c = s.companion && K.companion(s.companion.species) ? s.companion : null;
+        return h('li', {class: 'sp-sticker' + (s.studentId === me.studentId ? ' sp-sticker-me' : '')},
+          h('span', {class: 'sp-sticker-art', html: pic({avatarV2: s.avatarV2, look: s.look, seed: s.studentId, wear: s.wear, tier: s.tier, mood: 'great', fit: true, uid: 'c' + i})}),
+          c ? h('span', {class: 'sp-sticker-pet'}, companionArt(c.species, c.state === 'pet' ? c.stage : 0, 'cs' + i)) : null,
+          h('span', {class: 'sp-sticker-name', text: s.name}),
+          h('span', {class: 'sp-sticker-pts' + (s.points < 0 ? ' sp-neg' : ''), text: '✦ ' + s.points}),
+          c ? h('span', {class: 'sp-sticker-stage', text: c.state === 'egg' ? 'Egg' : c.stageName}) : null);
+      })));
+  }
+  function drawBoard(remember) {
+    var b = S.board, me = b.me, mine = saved(), seen = mine.seen && mine.seen.studentId === me.studentId ? mine.seen : null, c = companionOf(me);
+    var gained = seen ? me.points - seen.points : 0, stageNow = c && c.state === 'pet' ? c.stage : 0;
+    var grewNow = !!(c && c.state === 'pet' && (seen && typeof seen.stage === 'number' ? seen.stage < stageNow : c.grewLastNight));
+    S.preview = '';
+    screen(top(null, sparklesChip(me.balance)),
+      castleCard(me, gained),
+      h('p', {class: 'sp-board-status', role: 'status', text: ''}),
+      companionCard(me, grewNow),
+      historyCard(me),
+      b.goal && b.goal.target > 0 ? h('section', {class: 'sp-card sp-jar'}, h('div', {class: 'sp-jar-art', html: P.jarSvg(b.goal.progress, b.goal.target, 'home')}),
+        h('div', {class: 'sp-jar-copy'}, h('h2', {class: 'sp-h2', text: b.goal.name || 'Class goal'}), h('p', {class: 'sp-jar-count'}, h('strong', {text: String(Math.min(b.goal.progress, b.goal.target))}), ' of ' + b.goal.target + ' class ' + WORD), h('p', {class: 'sp-jar-left', text: b.goal.progress >= b.goal.target ? 'Your class did it!' : 'Your class needs ' + (b.goal.target - b.goal.progress) + ' more.'}))) : null,
+      classCard(b, me),
+      h('section', {class: 'sp-soon', 'aria-label': 'Explore SPARKADE'},
+        V ? h('button', {type: 'button', class: 'sp-soon-tile sp-wardrobe-entry', onclick: wardrobe}, h('span', {class: 'sp-soon-name', text: 'Wardrobe'}), h('span', {class: 'sp-soon-tag', text: 'Design your avatar'})) : h('span', {class: 'sp-soon-tile'}, h('span', {class: 'sp-soon-name', text: 'Wardrobe'}), h('span', {class: 'sp-soon-tag', text: 'Coming soon'})),
+        ['Shop'].map(function (name) { return h('span', {class: 'sp-soon-tile'}, h('span', {class: 'sp-soon-name', text: name}), h('span', {class: 'sp-soon-tag', text: 'Coming soon'})); })),
+      h('footer', {class: 'sp-foot'}, h('button', {type: 'button', class: 'sp-btn sp-btn-soft', onclick: loadBoard}, 'Refresh'), h('button', {type: 'button', class: 'sp-link', onclick: signOut}, 'Not ' + me.name + '? Switch')));
+    if (remember !== false) { mine.seen = {studentId: me.studentId, points: me.points, stage: stageNow}; save(mine); }
+    say(me.name + ', ' + P.sparks(me.balance) + ' to spend.' + (c ? ' ' + kindOf(c.species).name + (c.state === 'egg' ? ' egg.' : ', ' + c.stageName + '.') : ''));
+  }
+  /* A draft belongs only to this pupil's current visit. No call to run(), save() or storage happens in the maker.
+   * The short code describes parts only; the teacher chooses the pupil and confirms the lasting change in class. */
+  function clearAvatarDraft() { S.avatarDraft = null; S.avatarOwner = ''; S.avatarCodeShown = false; }
+  function savedAvatar(me) { return V.parse(me.avatarV2) || V.fromLegacy(me.look, me.studentId); }
+  function wardrobe() {
+    if (!V || !S.board) return;
+    var me = S.board.me, companion = companionOf(me);
+    if (!S.avatarDraft || S.avatarOwner !== me.studentId) { S.avatarDraft = savedAvatar(me); S.avatarOwner = me.studentId; S.avatarCodeShown = false; }
+    var portrait = h('span', {class: 'sp-avatar-preview-art'}), choices = [], code = h('output', {class: 'sp-avatar-code', 'aria-label': 'Your avatar design code'});
+    var codeBox = h('section', {class: 'sp-avatar-code-box', hidden: !S.avatarCodeShown, 'aria-label': 'Show your teacher'},
+      h('h2', {class: 'sp-h2', text: 'Show this in class'}), code,
+      h('p', {class: 'sp-muted', text: 'Your teacher can use this code to apply your design. It has no name or PIN in it.'}));
+    function refresh() {
+      portrait.innerHTML = pic({avatarV2: S.avatarDraft, seed: me.studentId, uid: 'wardrobe', label: 'Your avatar preview'});
+      code.textContent = V.code(S.avatarDraft);
+      choices.forEach(function (choice) { var selected = S.avatarDraft[choice.slot] === choice.id; choice.node.setAttribute('aria-pressed', String(selected)); choice.node.className = 'sp-avatar-choice' + (selected ? ' sp-avatar-choice-on' : ''); });
+    }
+    var groups = [['body', 'Skin tone'], ['hair', 'Hair'], ['outfit', 'Outfit']].map(function (field) {
+      return h('fieldset', {class: 'sp-avatar-group'}, h('legend', {text: field[1]}),
+        h('div', {class: 'sp-avatar-options'}, V.CATALOG[field[0]].map(function (option) {
+          var button = h('button', {type: 'button', class: 'sp-avatar-choice', 'aria-pressed': 'false', onclick: function () {
+            S.avatarDraft[field[0]] = option.id; refresh(); say(option.name + ' selected for your preview.');
+          }}, option.name);
+          choices.push({slot: field[0], id: option.id, node: button}); return button;
+        })));
+    });
+    screen(top(h('button', {type: 'button', class: 'sp-link', onclick: function () { drawBoard(false); }}, '‹ Back to my castle'), sparklesChip(me.balance)),
+      h('section', {class: 'sp-card sp-wardrobe'},
+        h('h1', {class: 'sp-title', tabindex: '-1', text: 'Design your avatar'}),
+        h('p', {class: 'sp-lead', text: 'Try a look. Show your teacher in class.'}),
+        h('p', {class: 'sp-muted', text: 'This is a preview for this visit. Your class avatar changes only when your teacher applies it.'}),
+        h('div', {class: 'sp-avatar-studio'},
+          h('div', {class: 'sp-avatar-stage'}, h('span', {class: 'sp-avatar-preview-tag', text: 'Your preview'}), portrait,
+            companion ? h('span', {class: 'sp-avatar-preview-companion'}, companionArt(companion.species, companion.state === 'pet' ? companion.stage : 0, 'wardrobe-pet')) : null),
+          h('div', {class: 'sp-avatar-controls'}, groups)),
+        h('div', {class: 'sp-avatar-actions'},
+          h('button', {type: 'button', class: 'sp-btn', onclick: function () { S.avatarCodeShown = true; codeBox.hidden = false; codeBox.removeAttribute('hidden'); say('Show your teacher this design code: ' + V.code(S.avatarDraft)); }}, 'Show my teacher'),
+          h('button', {type: 'button', class: 'sp-btn sp-btn-soft', onclick: function () { S.avatarDraft = savedAvatar(me); refresh(); say('Preview reset to your current avatar.'); }}, 'Reset preview')),
+        codeBox));
+    refresh(); focus(app.querySelector('.sp-title'));
+  }
+  /* Care: a short reaction on this page only. */
+  function care(action) {
+    var reactions = {Pet: ['♥', 'Your companion enjoyed a gentle pat.'], Water: ['💧', 'A refreshing drink for your companion.'], Snack: ['🍎', 'Your companion enjoyed the snack.'], Walk: ['🐾', 'You and your companion take a little stroll.']};
+    var c = S.board && companionOf(S.board.me);
+    if (!reactions[action] || !c || c.state !== 'pet') return;
+    var msg = app.querySelector('.sp-care-msg'), pet = app.querySelector('.sp-companion .sp-egg-btn'), scene = app.querySelector('.sp-castle-pet');
+    if (!msg) return;
+    if (S.careTimer) clearTimeout(S.careTimer);
+    msg.textContent = reactions[action][1]; say(reactions[action][1]);
+    var tag = h('span', {class: 'sp-care-reaction', 'aria-hidden': 'true', text: reactions[action][0]});
+    if (pet) { pet.querySelectorAll('.sp-care-reaction').forEach(function (x) { x.remove(); }); pet.append(tag); if (action !== 'Pet') wobble(pet); }
+    if (scene) { scene.classList.remove('sp-care-walk'); if (action === 'Walk' && !reduceMotion()) scene.classList.add('sp-care-walk'); }
+    S.careTimer = setTimeout(function () { S.careTimer = 0; if (tag.isConnected) tag.remove(); if (scene) scene.classList.remove('sp-care-walk'); if (msg.isConnected) msg.textContent = 'Your companion is happy to see you.'; }, 2200);
+  }
+  function signOut() { ++S.request; S.busy = false; clearAvatarDraft(); var m = saved(); delete m.session; delete m.studentId; save(m); S.board = null; loadRoster(); }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && S.board && !S.busy && Date.now() - S.loadedAt > 60000 && app.querySelector('.sp-castle')) loadBoard(); });
+  start();
+})();
+
+</script>
+</body>
+</html>
