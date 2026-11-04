@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>SPARKADE 3D test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+<style>
+/* SPARKADE piece C, step 1: a real-time 3D test with a stand-in Prism Dragon. Kit tokens from next-look hud/UI-KIT.md. */
+:root{--navy:#0A1230;--panel:#15214A;--glass:rgba(14,24,60,.72);--edge:rgba(255,255,255,.2);--pill:rgba(8,14,36,.58);
+--cream:#F7EBD0;--teal:#5FD7BC;--gold:linear-gradient(180deg,#FFE9AE 0%,#EBC56C 38%,#CB9730 78%,#E4BA5E 100%);--gold-edge:#7A5312;--gold-press:#8A5F16;
+--font:"Nunito","Segoe UI",system-ui,-apple-system,sans-serif;--btn:72px}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#1a1208;color:var(--cream);font-family:var(--font);-webkit-tap-highlight-color:transparent}
+#view{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:block;touch-action:none;outline:none}
+.hud{position:fixed;inset:0;pointer-events:none;user-select:none;-webkit-user-select:none}
+.hud>*{pointer-events:auto}
+#fps{position:absolute;top:max(14px,env(safe-area-inset-top));left:16px;padding:8px 14px;border-radius:999px;background:var(--pill);font:800 15px/1.2 var(--font);letter-spacing:.01em;white-space:nowrap}
+#fps b{font-weight:900}
+#fps small{display:block;font:700 12px/1.3 var(--font);opacity:.78}
+#tag{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;padding:8px 14px;border-radius:999px;background:var(--pill);font:700 12px/1.3 var(--font);opacity:.85;text-align:right;max-width:46vw}
+#nametag{position:absolute;left:0;top:0;transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;transition:opacity .3s ease-out;will-change:transform}
+#nametag b{font:900 20px/1 var(--font);text-shadow:0 2px 0 rgba(10,18,48,.75),0 0 10px rgba(10,18,48,.6)}
+#nametag span{padding:4px 11px;border-radius:999px;background:var(--pill);font:900 13px/1.2 var(--font)}
+#nametag span i{font-style:normal;color:#F3C66B;margin-right:4px}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:0 16px max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:none;
+background:linear-gradient(180deg,rgba(10,18,48,0),rgba(10,18,48,.55))}
+.dock>*{pointer-events:auto}
+.sliders{display:flex;gap:12px 22px;flex-wrap:wrap;justify-content:center;max-width:100%}
+.slide{display:grid;grid-template-columns:auto minmax(120px,190px) 7.5em;align-items:center;gap:10px;padding:8px 14px;border-radius:999px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--edge);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:900 14px/1 var(--font);max-width:100%}
+.slide output{font:800 13px/1 var(--font);opacity:.9;white-space:nowrap}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,var(--teal) 0 var(--fill,50%),rgba(255,255,255,.18) var(--fill,50%) 100%)}
+input[type=range]::-moz-range-track{height:8px;border-radius:999px;background:rgba(255,255,255,.18)}
+input[type=range]::-moz-range-progress{height:8px;border-radius:999px;background:var(--teal)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-8px;border-radius:50%;background:var(--cream);box-shadow:0 3px 0 rgba(0,0,0,.35)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;background:var(--cream);box-shadow:0 3px 0 rgba(0,0,0,.35)}
+input[type=range]:focus-visible{outline:3px solid var(--teal);outline-offset:2px;border-radius:999px}
+.buttons{display:flex;gap:clamp(14px,3vw,30px);justify-content:center}
+.act{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;padding:0;color:var(--cream);font:900 14px/1 var(--font);cursor:pointer;text-shadow:0 2px 0 rgba(10,18,48,.7)}
+.act .disc{width:var(--btn);height:var(--btn);border-radius:50%;display:grid;place-items:center;background:var(--glass);box-shadow:inset 0 0 0 1px var(--edge),0 4px 0 rgba(4,8,24,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:transform .08s ease-out,box-shadow .08s ease-out,background .3s ease-out}
+.act svg{width:46%;height:46%;fill:var(--cream);transition:fill .3s ease-out}
+.act.gold .disc{background:var(--gold);box-shadow:inset 0 0 0 2px var(--gold-edge),0 4px 0 var(--gold-press)}
+.act.gold svg{fill:var(--navy)}
+.act:active .disc,.act.pressed .disc{transform:translateY(4px);box-shadow:inset 0 0 0 1px var(--edge),0 0 0 rgba(4,8,24,.55)}
+.act.gold:active .disc,.act.gold.pressed .disc{box-shadow:inset 0 0 0 2px var(--gold-edge),0 0 0 var(--gold-press)}
+.act:focus-visible{outline:none}
+.act:focus-visible .disc{outline:3px solid var(--teal);outline-offset:3px}
+#note{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);max-width:min(520px,calc(100vw - 32px));padding:18px 22px;border-radius:22px;background:var(--panel);font:800 16px/1.4 var(--font);text-align:center;display:none}
+@media (max-width:600px){
+  :root{--btn:60px}
+  .sliders{flex-direction:column;align-items:stretch;gap:8px;width:100%}
+  .slide{grid-template-columns:4.2em 1fr 6.6em;width:100%}
+  .act{font-size:13px}
+  #nametag b{font-size:17px}
+  #tag{display:none}
+}
+@media (prefers-reduced-motion:reduce){.act .disc,.act svg,#nametag{transition-duration:.01s}}
+</style>
+</head>
+<body>
+<canvas id="view" tabindex="0" aria-label="The courtyard with a stand-in Prism Dragon. Tap the dragon to wake it or make it cheer; tap the ground to make it look."></canvas>
+<div class="hud">
+  <div id="fps" aria-live="off"><b>– fps</b><small>median over 30 s · 1 dragon</small></div>
+  <div id="tag">Stand-in 3D test<br>no models bought</div>
+  <div id="nametag"><b>Prism Dragon</b><span><i>✦</i><em id="stageName" style="font-style:normal">Skywing</em></span></div>
+  <div class="dock">
+    <div class="sliders">
+      <label class="slide">Stage<input id="stage" type="range" min="1" max="5" step="1" value="3" aria-label="Growth stage, 1 to 5"><output id="stageOut">3 · Skywing</output></label>
+      <label class="slide">Pupils<input id="pupils" type="range" min="1" max="30" step="1" value="1" aria-label="Dragons in the courtyard, 1 to 30"><output id="pupilsOut">1 dragon</output></label>
+    </div>
+    <div class="buttons">
+      <button class="act" data-act="feed" type="button"><span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4.2c.9-1 2.6-.8 3.1.4.6-1.2 2.4-1.3 3.2-.3.8 1 .4 2.4-.6 3H9.2c-1-.6-1.4-2.1-.7-3.1zM2 10h20c0 5.1-3.6 9-8 9.7V21h2.5v1.5h-9V21H10v-1.3C5.6 19 2 15.1 2 10z"/></svg></span>Feed</button>
+      <button class="act" data-act="sleep" type="button"><span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.2 2.3A9.8 9.8 0 1 0 21.7 15 8 8 0 0 1 14.2 2.3z"/></svg></span>Sleep</button>
+      <button class="act" data-act="wake" type="button"><span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.2"/><path d="M10.8 0h2.4v4h-2.4zM10.8 20h2.4v4h-2.4zM0 10.8h4v2.4H0zM20 10.8h4v2.4h-4zM3.1 4.8l1.7-1.7 2.8 2.8-1.7 1.7zM16.4 18.1l1.7-1.7 2.8 2.8-1.7 1.7zM3.1 19.2l2.8-2.8 1.7 1.7-2.8 2.8zM16.4 5.9l2.8-2.8 1.7 1.7-2.8 2.8z"/></svg></span>Wake</button>
+      <button class="act gold" data-act="cheer" type="button"><span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></svg></span>Cheer</button>
+    </div>
+  </div>
+  <div id="note" role="status"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js" integrity="sha512-vnmn/Qqn6aG0POAc9mIGzjq0IybrvxJXYDafNvp9JSnDGxeF3pbkSqLvf+YGd5ku63pT7sa/jxHn7/d0mU8+tA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="brain.js"></script>
+<script src="scene.js"></script>
+</body>
+</html>
