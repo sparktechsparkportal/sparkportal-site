@@ -68,6 +68,8 @@
     this.nextFidget = 4 + this.rand() * 5;
     this.nextWander = 2 + this.rand() * 8;
     this.history = ['idle'];
+    this.maxSpeed = opts.maxSpeed || 0;     // a loaded model sets this from its walk clip's stride (m/s); 0 uses MAX_SPEED
+    this.reach = null;                      // a loaded model sets how far from the bowl its feet stop (m)
   }
 
   Brain.prototype.drain = function () { var e = this.events; this.events = []; return e; };
@@ -93,7 +95,7 @@
   // Commands (buttons and taps).
   Brain.prototype.feed = function (bowl) {
     var dx = this.x - bowl.x, dz = this.z - bowl.z, d = Math.hypot(dx, dz) || 1;
-    var reach = 0.8 * this.grow.scale;
+    var reach = this.reach != null ? this.reach : 0.8 * this.grow.scale;
     this.food = 3;
     this.events.push('refill');
     this.go([{type: 'walk', x: bowl.x + dx / d * reach, z: bowl.z + dz / d * reach, stop: 0.08},
@@ -125,7 +127,7 @@
   Brain.prototype.moveTo = function (x, z, dt) {
     var dx = x - this.x, dz = z - this.z, dist = Math.hypot(dx, dz);
     var err = this.steer(Math.atan2(dx, dz), dt, dist > 0.02);
-    var max = MAX_SPEED * Math.sqrt(this.grow.scale);
+    var max = this.maxSpeed || MAX_SPEED * Math.sqrt(this.grow.scale);
     var facing = Math.max(0, Math.cos(err));
     var want = Math.abs(err) > 1.0 ? 0 : Math.min(max, dist * 2.2) * facing * facing;
     this.speed = damp(this.speed, want, 5, dt);

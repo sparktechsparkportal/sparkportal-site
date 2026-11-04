@@ -7,7 +7,7 @@
   var note = document.getElementById('note');
   function fail(text) { note.textContent = text; note.style.display = 'block'; window.__proto = {ready: false, error: text}; }
   if (!window.THREE) return fail('Three.js did not load. This test page needs the internet once to fetch it from cdnjs.');
-  var T = window.THREE, B = window.SparkadeBrain;
+  var T = window.THREE, B = window.SparkadeBrain, M = window.SparkadeModels;
   var Brain = B.Brain, STAGES = B.STAGES;
 
   // ---------- settings ----------
@@ -17,6 +17,9 @@
   var WORLD = 1.25;                             // dragon size at scale 1 (Guardian: head about 1.25 m up, a pupil's chest)
   var REF = {fov: 45, aspect: 16 / 9, pos: new T.Vector3(0, 7, 12.12), look: new T.Vector3(0, 0, 0)};
   var BOUNDS = {minX: -5.4, maxX: 5.4, minZ: -4.3, maxZ: 4.4};
+  var DEBUG = query.get('debug') === '1';
+  var MODEL_HEIGHT = Math.max(0.3, Math.min(3, Number(query.get('height')) || 0.8)); // a loaded model's height at stage 3, metres
+  var SHADE = query.get('shade') === 'original' ? 'original' : 'toon';
   var COLORS = {teal: '#2A8F87', tealDark: '#1B625F', cream: '#F4E2BE', gold: '#E8B54E', peach: '#F6BE8E', amber: '#D07A22',
     pupil: '#24140A', white: '#FFFFFF', claw: '#F8EED6'};
 
@@ -400,17 +403,32 @@
   var sparksLive = 0;
 
   // ---------- dragons ----------
-  var dragons = [];
+  var dragons = [], asset = null;
   function addDragon(main, k) {
     var opts = main ? {x: 0, z: 1.0, heading: 0, seed: 11} : spawnSpot(k);
     var b = new Brain(opts);
     if (!main) { b.wander = true; b.bounds = BOUNDS; b.setStage(1 + Math.floor(b.rand() * 5)); b.grow = Object.assign({}, STAGES[b.stage - 1]); }
-    var R = makeRig(main);
-    scene.add(R.root);
-    var d = {brain: b, rig: R, main: main};
+    var d = {brain: b, rig: null, model: null, main: main};
+    dress(d);
     dragons.push(d);
     return d;
   }
+  // A dragon slot is drawn either by the stand-in rig or by a copy of the loaded model (same brain either way).
+  function dress(d) {
+    undress(d);
+    if (asset) { d.model = new M.Creature(asset, {height: MODEL_HEIGHT, shadowGeo: GEO.shadow, shadowMat: shadowMat, glowTex: glowTex, starTex: sparkTex}); scene.add(d.model.root); }
+    else { d.rig = makeRig(d.main); scene.add(d.rig.root); d.brain.maxSpeed = 0; d.brain.reach = null; }
+  }
+  function undress(d) {
+    if (d.rig) {
+      scene.remove(d.rig.root);
+      d.rig.starMat.dispose(); d.rig.glow.material.dispose();
+      if (d.rig.zzz) d.rig.zzz.forEach(function (z) { z.material.dispose(); });
+      d.rig = null;
+    }
+    if (d.model) { scene.remove(d.model.root); d.model.dispose(); d.model = null; }
+  }
+  function visual(d) { return d.model ? d.model.root : d.rig.root; }
   function spawnSpot(k) {
     // Spread the class over the floor on a jittered grid, clear of your own dragon, the bowl and the bed.
     var cols = 6, rows = 5, i = (k * 7) % (cols * rows);
@@ -424,16 +442,120 @@
     n = Math.max(1, Math.min(30, Math.round(n)));
     while (dragons.length < n) addDragon(false, dragons.length);
     while (dragons.length > n) {
-      var d = dragons.pop();
-      scene.remove(d.rig.root);
-      d.rig.starMat.dispose(); d.rig.glow.material.dispose();
-      if (d.rig.zzz) d.rig.zzz.forEach(function (z) { z.material.dispose(); });
+      undress(dragons.pop());
     }
-    pupilsOut.textContent = n === 1 ? '1 dragon' : n + ' dragons';
+    pupilsOut.textContent = n === 1 ? '1 ' + creatureWord(1) : n + ' ' + creatureWord(n);
     fill(pupilsIn);
   }
   var main = addDragon(true, 0);
   var me = main.brain;
+
+  // ---------- smoke breath: a soft grey puff from in front of the head every 6 to 10 s (the dragon slot only) ----------
+  var smokeTex = canvasTex(64, function (g, n) {
+    var r = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+    r.addColorStop(0, 'rgba(236,232,226,.9)'); r.addColorStop(0.5, 'rgba(206,202,196,.45)'); r.addColorStop(1, 'rgba(190,186,180,0)');
+    g.fillStyle = r; g.fillRect(0, 0, n, n);
+  });
+  var SMOKE = 24, smoke = [], smokeOn = query.get('smoke') !== '0', smokeNext = 4, smokeLive = 0, smokePuffs = 0, smokeHead = new T.Vector3(), smokeDir = new T.Vector3();
+  for (var si = 0; si < SMOKE; si++) {
+    var sp = new T.Sprite(new T.SpriteMaterial({map: smokeTex, color: '#D9D5CF', transparent: true, depthWrite: false, opacity: 0}));
+    sp.visible = false; sp.userData = {life: 0, max: 1, v: new T.Vector3(), size: 0.1};
+    scene.add(sp); smoke.push(sp);
+  }
+  var smokeCursor = 0;
+  function puff() {
+    var d = main;
+    if (d.model) d.model.mouth(smokeHead);
+    else { d.rig.head.localToWorld(smokeHead.set(0, 0.02, 0.36)); }
+    smokeDir.set(Math.sin(me.heading), 0, Math.cos(me.heading));
+    var f = d.model ? d.model.factor : me.grow.scale;
+    for (var k = 0; k < 7; k++) {
+      var p = smoke[smokeCursor]; smokeCursor = (smokeCursor + 1) % SMOKE;
+      p.position.copy(smokeHead).addScaledVector(smokeDir, 0.02 * k * f);
+      p.userData.v.copy(smokeDir).multiplyScalar((0.18 + Math.random() * 0.12) * f);
+      p.userData.v.y = (0.12 + Math.random() * 0.1) * f;
+      p.userData.v.x += (Math.random() - 0.5) * 0.06; p.userData.v.z += (Math.random() - 0.5) * 0.06;
+      p.userData.life = p.userData.max = 1.6 + Math.random() * 0.8 + k * 0.06;
+      p.userData.size = (0.07 + Math.random() * 0.04) * f;
+      p.visible = true;
+    }
+    smokePuffs++;
+  }
+  function stepSmoke(dt) {
+    var live = 0;
+    if (smokeOn && me.state !== 'cheer') {
+      smokeNext -= dt;
+      if (smokeNext <= 0) { puff(); smokeNext = 6 + Math.random() * 4; }
+    }
+    for (var i = 0; i < SMOKE; i++) {
+      var p = smoke[i], u = p.userData;
+      if (u.life <= 0) { p.visible = false; continue; }
+      live++;
+      u.life -= dt;
+      var age = 1 - u.life / u.max;
+      p.position.addScaledVector(u.v, dt);
+      u.v.multiplyScalar(Math.exp(-0.9 * dt));
+      p.material.opacity = 0.55 * Math.sin(Math.PI * Math.min(1, age * 1.2)) * (1 - age);
+      p.scale.setScalar(u.size * (1 + age * 3.2));
+    }
+    smokeLive = live;
+  }
+
+  // ---------- loading a model: ?model=<address>, or the Load model button (read from the owner's disk, never uploaded) ----------
+  var MODEL_OPTS = {stageScales: STAGES.map(function (s) { return s.scale; }), cushion: 0.16};
+  var modelState = 'stand-in';
+  function creatureWord(n) { var w = asset ? asset.name.toLowerCase() : 'dragon'; return n === 1 ? w : (/(s|x|sh|ch)$/.test(w) ? w + 'es' : w + 's'); }
+  function useModel(a) {
+    if (asset) asset = null;
+    M.applyShading(a, ramp, SHADE);
+    asset = a;
+    dragons.forEach(dress);
+    modelState = 'loaded';
+    var nice = a.name.replace(/[_-]+/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); });
+    document.querySelector('#nametag b').textContent = nice;
+    tagEl.innerHTML = 'Model: ' + escapeHtml(a.file) + '<br>' + a.info.triangles.toLocaleString('en') + ' triangles · ' + a.info.clips.length + ' clips';
+    canvas.setAttribute('aria-label', 'The courtyard with ' + nice + '. Tap it to wake it or make it cheer; tap the ground to make it look.');
+    setPupils(dragons.length);
+    showDebug();
+  }
+  function modelFailed(why) {
+    modelState = 'error';
+    note.textContent = 'The model could not be loaded (' + why + '). The stand-in dragon stays.';
+    note.style.display = 'block';
+    setTimeout(function () { note.style.display = 'none'; }, 6000);
+    showDebug(why);
+  }
+  function loadModelUrl(value) {
+    var url = M.safeModelUrl(value, location.href);
+    if (!url) { modelFailed('the address must be a file next to this page or an https address'); return Promise.resolve(false); }
+    if (location.protocol === 'file:' && /^file:/.test(url)) { modelFailed('a page opened from file:// cannot read files by address; use Load model'); return Promise.resolve(false); }
+    modelState = 'loading';
+    return M.loadFrom(url).then(function (a) { useModel(a); return true; }, function (e) { modelFailed(e.message || 'unreadable file'); return false; });
+  }
+  var tagEl = document.getElementById('tag'), picker = document.getElementById('picker');
+  document.getElementById('loadModel').addEventListener('click', function () { picker.click(); });
+  picker.addEventListener('change', function () {
+    var file = picker.files && picker.files[0];
+    if (!file) return;
+    modelState = 'loading';
+    file.arrayBuffer().then(function (buf) { return M.loadFrom(buf, file.name); })
+      .then(useModel, function (e) { modelFailed(e.message || 'unreadable file'); });
+    picker.value = '';
+  });
+  var smokeBtn = document.getElementById('smokeToggle');
+  function showSmoke() { smokeBtn.setAttribute('aria-pressed', String(smokeOn)); smokeBtn.textContent = smokeOn ? 'Smoke: on' : 'Smoke: off'; }
+  smokeBtn.addEventListener('click', function () { smokeOn = !smokeOn; smokeNext = smokeOn ? 1.5 : smokeNext; showSmoke(); });
+  showSmoke();
+  function escapeHtml(t) { return String(t).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+  var debugEl = document.getElementById('debug');
+  function showDebug(error) {
+    if (!DEBUG) return;
+    debugEl.hidden = false;
+    var rows = asset ? M.describe(asset) : [['model', 'none loaded: the stand-in dragon']];
+    if (error) rows.unshift(['error', error]);
+    debugEl.innerHTML = '<h2>Model check</h2><dl>' + rows.map(function (r) { return '<dt>' + escapeHtml(r[0]) + '</dt><dd>' + escapeHtml(r[1]) + '</dd>'; }).join('') + '</dl>';
+  }
+  showDebug();
 
   // ---------- UI ----------
   var stageIn = document.getElementById('stage'), stageOut = document.getElementById('stageOut'), stageName = document.getElementById('stageName');
@@ -475,7 +597,7 @@
   canvas.addEventListener('pointerup', function (e) {
     if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 14) return;
     toNdc(e);
-    var on = ray.intersectObject(main.rig.root, true).length > 0;
+    var on = main.model ? ray.intersectObject(main.model.hit, false).length > 0 : ray.intersectObject(main.rig.root, true).length > 0;
     if (on) me.tap();
     else { var p = groundPoint(e); if (p) me.lookAt(p.x, p.z); }
     downAt = null;
@@ -535,16 +657,18 @@
       b.update(dt);
       var ev = b.drain();
       for (var k = 0; k < ev.length; k++) {
-        if (ev[k] === 'sparkle') { d.rig.star.getWorldPosition(tagPos); burst(tagPos); }
+        if (ev[k] === 'sparkle') { if (d.model) d.model.chest(tagPos); else d.rig.star.getWorldPosition(tagPos); burst(tagPos); }
         if (d.main && (ev[k] === 'bite' || ev[k] === 'refill')) for (var j = 0; j < 3; j++) berries[j].visible = j < b.food;
       }
-      pose(d.rig, b, time + i * 1.7);
+      if (d.model) d.model.update(b, dt, time + i * 1.7, MODEL_OPTS);
+      else pose(d.rig, b, time + i * 1.7);
     }
     sparksLive = stepSparks(dt);
+    stepSmoke(dt);
     stepCamera(dt);
     renderer.render(scene, camera);
     // Name tag under the dragon's feet.
-    tagPos.set(me.x, 0, me.z + 0.45 * me.grow.scale);
+    tagPos.set(me.x, 0, me.z + (main.model ? Math.max(0.3, main.model.asset.box.max.z * main.model.factor * 0.7) : 0.45 * me.grow.scale));
     tagPos.project(camera);
     nametag.style.transform = 'translate(' + ((tagPos.x * 0.5 + 0.5) * innerWidth) + 'px,' + ((-tagPos.y * 0.5 + 0.5) * innerHeight) + 'px) translate(-50%,0)';
     goldButton();
@@ -552,11 +676,13 @@
       lastShown = now;
       var st = fpsStats();
       fpsEl.innerHTML = '<b>' + (st.medianFps ? Math.round(st.medianFps) : '–') + ' fps</b><small>median over ' + Math.min(30, Math.round(st.seconds)) + ' s · ' +
-        (dragons.length === 1 ? '1 dragon' : dragons.length + ' dragons') + (reduced ? ' · slowed' : '') + '</small>';
+        (dragons.length === 1 ? '1 ' + creatureWord(1) : dragons.length + ' ' + creatureWord(dragons.length)) + (reduced ? ' · slowed' : '') + '</small>';
     }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  if (query.get('model')) loadModelUrl(query.get('model'));
 
   // ---------- hooks for the browser check (qa.cjs) ----------
   var gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info');
@@ -571,8 +697,19 @@
     sparklesLive: function () { return sparksLive; },
     resetFps: function () { frames = []; },
     fpsStats: fpsStats,
+    model: function () { return asset ? {name: asset.name, file: asset.file, info: asset.info, map: asset.map, bones: asset.bones, feet: asset.feet, blink: asset.blink.path,
+      stride: asset.stride, walkSpeed: asset.walkSpeed, turn: asset.turn, notes: asset.notes, shade: asset.shade} : null; },
+    modelState: function () { return modelState; },
+    loadModel: function (url) { return loadModelUrl(url); },
+    mainPose: function () {
+      var m = main.model; if (!m) return null;
+      var w = {}; for (var k in m.actions) w[k] = Math.round(m.actions[k].getEffectiveWeight() * 100) / 100;
+      return {weights: w, factor: m.factor, speed: me.speed, maxSpeed: me.maxSpeed, walkRate: m.actions.walk ? m.actions.walk.getEffectiveTimeScale() : null, rootY: m.hopper.position.y, scaleY: m.sizer.scale.y};
+    },
+    smoke: function () { return {on: smokeOn, live: smokeLive, puffs: smokePuffs}; },
+    puffNow: function () { smokeNext = 0; },
     screenOf: function () {
-      var v = new T.Vector3(); main.rig.torso.getWorldPosition(v); v.project(camera);
+      var v = new T.Vector3(); (main.model ? main.model.hit : main.rig.torso).getWorldPosition(v); v.project(camera);
       return {x: (v.x * 0.5 + 0.5) * innerWidth, y: (-v.y * 0.5 + 0.5) * innerHeight};
     },
     info: function () {

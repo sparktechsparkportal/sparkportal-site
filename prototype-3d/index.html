@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
 <style>
-/* SPARKADE piece C, step 1: a real-time 3D test with a stand-in Prism Dragon. Kit tokens from next-look hud/UI-KIT.md. */
+/* SPARKADE piece C: a real-time 3D test with a stand-in Prism Dragon (step 1) that loads rigged GLB models (step 2). Kit tokens from next-look hud/UI-KIT.md. */
 :root{--navy:#0A1230;--panel:#15214A;--glass:rgba(14,24,60,.72);--edge:rgba(255,255,255,.2);--pill:rgba(8,14,36,.58);
 --cream:#F7EBD0;--teal:#5FD7BC;--gold:linear-gradient(180deg,#FFE9AE 0%,#EBC56C 38%,#CB9730 78%,#E4BA5E 100%);--gold-edge:#7A5312;--gold-press:#8A5F16;
 --font:"Nunito","Segoe UI",system-ui,-apple-system,sans-serif;--btn:72px}
@@ -21,7 +21,16 @@ html,body{margin:0;height:100%;overflow:hidden;background:#1a1208;color:var(--cr
 #fps{position:absolute;top:max(14px,env(safe-area-inset-top));left:16px;padding:8px 14px;border-radius:999px;background:var(--pill);font:800 15px/1.2 var(--font);letter-spacing:.01em;white-space:nowrap}
 #fps b{font-weight:900}
 #fps small{display:block;font:700 12px/1.3 var(--font);opacity:.78}
-#tag{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;padding:8px 14px;border-radius:999px;background:var(--pill);font:700 12px/1.3 var(--font);opacity:.85;text-align:right;max-width:46vw}
+#tools{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;display:flex;gap:8px}
+.chip{border:0;padding:9px 14px;border-radius:999px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--edge);color:var(--cream);font:900 13px/1.1 var(--font);cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);white-space:nowrap}
+.chip:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.chip[aria-pressed=false]{opacity:.7}
+#debug{position:absolute;top:calc(max(14px,env(safe-area-inset-top)) + 58px);left:16px;width:min(430px,calc(100vw - 32px));max-height:min(58vh,520px);overflow:auto;padding:12px 16px;border-radius:18px;background:rgba(8,14,36,.86);font:700 12px/1.4 var(--font)}
+#debug h2{margin:0 0 6px;font:900 14px/1.2 var(--font);color:#F3C66B}
+#debug dl{margin:0;display:grid;grid-template-columns:7.5em 1fr;gap:3px 10px}
+#debug dt{opacity:.7}
+#debug dd{margin:0;overflow-wrap:anywhere}
+#tag{position:absolute;top:calc(max(14px,env(safe-area-inset-top)) + 48px);right:16px;padding:8px 14px;border-radius:999px;background:var(--pill);font:700 12px/1.3 var(--font);opacity:.85;text-align:right;max-width:46vw}
 #nametag{position:absolute;left:0;top:0;transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;transition:opacity .3s ease-out;will-change:transform}
 #nametag b{font:900 20px/1 var(--font);text-shadow:0 2px 0 rgba(10,18,48,.75),0 0 10px rgba(10,18,48,.6)}
 #nametag span{padding:4px 11px;border-radius:999px;background:var(--pill);font:900 13px/1.2 var(--font)}
@@ -65,7 +74,10 @@ input[type=range]:focus-visible{outline:3px solid var(--teal);outline-offset:2px
 <canvas id="view" tabindex="0" aria-label="The courtyard with a stand-in Prism Dragon. Tap the dragon to wake it or make it cheer; tap the ground to make it look."></canvas>
 <div class="hud">
   <div id="fps" aria-live="off"><b>– fps</b><small>median over 30 s · 1 dragon</small></div>
+  <div id="tools"><button class="chip" id="loadModel" type="button" title="Open a .glb file from this computer. Nothing is uploaded.">Load model</button><button class="chip" id="smokeToggle" type="button" aria-pressed="true">Smoke: on</button></div>
+  <input id="picker" type="file" accept=".glb,model/gltf-binary" hidden>
   <div id="tag">Stand-in 3D test<br>no models bought</div>
+  <div id="debug" hidden></div>
   <div id="nametag"><b>Prism Dragon</b><span><i>✦</i><em id="stageName" style="font-style:normal">Skywing</em></span></div>
   <div class="dock">
     <div class="sliders">
@@ -82,7 +94,9 @@ input[type=range]:focus-visible{outline:3px solid var(--teal);outline-offset:2px
   <div id="note" role="status"></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js" integrity="sha512-vnmn/Qqn6aG0POAc9mIGzjq0IybrvxJXYDafNvp9JSnDGxeF3pbkSqLvf+YGd5ku63pT7sa/jxHn7/d0mU8+tA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="three-addons.js"></script>
 <script src="brain.js"></script>
+<script src="models.js"></script>
 <script src="scene.js"></script>
 </body>
 </html>
