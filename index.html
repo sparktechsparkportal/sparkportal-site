@@ -1436,6 +1436,8 @@ details.cl-card[open]>summary::before{transform:rotate(45deg)}
 
 /* Top bar: class tabs on the left, tools on the right */
 .pts-bar-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.pts-bar-classes{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+#cp-root .pts-courtyard-btn{min-height:40px;padding:6px 18px;border-radius:999px;border:1px solid #7A5312;background:linear-gradient(180deg,#FFE9AE 0%,#EBC56C 48%,#CB9730 56%,#E4BA5E 100%);color:#1A2550;font-weight:800;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 3px 0 #8A5F16}
 .pts-tabs,.pts-tools,.pts-chips{display:flex;flex-wrap:wrap;gap:8px}
 #cp-root .pts-tab{min-height:40px;padding:6px 16px;border-radius:999px;border:1px solid var(--sp-control,#7b897e);background:var(--sp-panel,#fff);color:var(--sp-ink,#173640);font-weight:650;font-size:15px}
 #cp-root .pts-tab[aria-pressed="true"]{background:var(--sp-accent,#355f4c);border-color:var(--sp-accent,#355f4c);color:var(--sp-on-accent,#fff)}
@@ -4274,6 +4276,8 @@ function cpMenuWire(){
   cpEl('cp-menu-close').addEventListener('click',()=>cpMenuClose());
   cpEl('cp-scrim').addEventListener('click',()=>cpMenuClose());
   side.addEventListener('click',event=>{const drop=event.target.closest('[data-cp-drop]');if(drop){const open=drop.getAttribute('aria-expanded')!=='true';cpMenuDropSet(drop,open);cpMenuDropRemember(drop.getAttribute('aria-controls'),open);return;}const button=event.target.closest('[data-cp-go]');if(button)cpMenuGo(button.dataset.cpGo);});
+  // 4 November 2026: a route in the address hash (for example #teacher:cl-points from SPARKADE's Manage button) opens that page once the menu is wired, then leaves the address clean.
+  const hashRoute=(location.hash||'').slice(1);if(/^[a-z]+:[a-z0-9-]+$/.test(hashRoute)&&side.querySelector('[data-cp-go="'+hashRoute+'"]')){try{history.replaceState(null,'',location.pathname+location.search);}catch(_){}setTimeout(()=>{cpMenuGo(hashRoute);},0);}
   cpEl('cp-side-home').addEventListener('click',async()=>{const drawer=CPM.drawer;if(drawer)cpMenuClose(false);await cpGoHome();if(drawer)cpFocusPage(CP.page,true);});
   cpEl('cp-sign-out').addEventListener('click',()=>{if(CPM.drawer)cpMenuClose(false);});
   document.addEventListener('keydown',cpMenuKeys);
@@ -9534,7 +9538,9 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     ui.recentList = h('ul', { class: 'pts-recent-list' });
     ui.recent = h('section', { class: 'pts-recent', 'aria-label': 'Latest points' }, h('h2', { text: 'Latest' }), ui.recentList);
     ui.sparkade = h('section', { class: 'pts-sparkade', 'aria-label': 'SPARKADE companions' });
-    ui.body.append(h('div', { class: 'pts-bar-top' }, ui.tabs, tools), ui.selectBar, ...[pauseNotice(c)].filter(Boolean),
+    // Next look A2 (4 November 2026): the class's courtyard in teacher mode, in a new tab (the pupils' page reads teacher=1).
+    const yard = c.link ? h('button', { type: 'button', class: 'pts-small pts-courtyard-btn', onclick: () => { try { window.open(c.link + (c.link.indexOf('?') >= 0 ? '&' : '?') + 'teacher=1', '_blank', 'noopener'); } catch (_) { /* blocked */ } } }, 'Open the courtyard') : null;
+    ui.body.append(h('div', { class: 'pts-bar-top' }, h('div', { class: 'pts-bar-classes' }, ui.tabs, yard), tools), ui.selectBar, ...[pauseNotice(c)].filter(Boolean),
       h('div', { class: 'pts-layout' }, h('div', { class: 'pts-side' }, ui.jarCard, ui.sparkade, ui.recent), ui.grid));
     renderJar(); renderSparkade(); renderRecent(); renderSelectBar(); status();
   }
