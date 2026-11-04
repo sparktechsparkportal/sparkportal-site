@@ -4,7 +4,7 @@
    points-student.css. One thing is gold: the reason buttons and Everyone. No dock, no toolbar, no frame. */
 
 /* The crest: a teal dot and the teacher's first name after the class name (the name is a CSS string set by the layer). */
-[data-sp-teach] .world .crest-text b::after{content:var(--sp-teacher-name,"");display:inline-block;margin-left:12px;padding-left:18px;font-weight:800;font-size:.7em;vertical-align:.12em;color:var(--teal);text-shadow:none;
+[data-sp-teach] .world .crest-text b::after{content:var(--sp-teacher-name,"");display:inline-block;margin-left:12px;padding-left:18px;font-weight:800;font-size:var(--fs-2);vertical-align:.12em;color:var(--teal);text-shadow:none;
   background:radial-gradient(circle,var(--teal) 0 4.5px,rgba(95,215,188,.35) 5px,transparent 8px) 0 50%/14px 14px no-repeat}
 
 /* Corner buttons: Manage top right (in My room's place), Screen bottom left (quiet navy), Everyone bottom right (gold). */
@@ -13,9 +13,12 @@
 .sp-qb-everyone .sp-qb-disc{background:var(--gold-fill);border:1px solid var(--gold-edge);color:#1A2550;box-shadow:inset 0 2px 0 rgba(255,255,255,.8),0 5px 0 var(--gold-press),0 14px 24px rgba(0,0,0,.45);-webkit-backdrop-filter:none;backdrop-filter:none}
 .sp-qb .sp-i{fill:currentColor}
 
-/* Focus: the camera leans in six percent on the pupil, the rest dims; tap the dimmed scene to leave. */
-[data-sp-teach] .world-backdrop{transition:transform .3s ease-out,filter 1.2s}
-[data-sp-teach="focus"] .world-backdrop{transform:scale(1.06);transform-origin:var(--sp-tx,50%) var(--sp-ty,55%)}
+/* Focus: the camera leans in six percent on the pupil, the rest dims; tap the dimmed scene to leave. The lean is the
+   `scale` property (the world's living camera animates `transform`, its parallax sets `translate`), and the living camera
+   pauses while the ring is open (plan B 3). */
+[data-sp-teach] .world-backdrop{transition:scale .3s ease-out,transform-origin .3s ease-out,filter 1.2s}
+[data-sp-teach="focus"] .world-backdrop{scale:1.06;transform-origin:var(--sp-tx,50%) var(--sp-ty,55%)}
+[data-sp-teach="focus"] .world-backdrop,[data-sp-teach="focus"] .sw-floor{animation-play-state:paused}
 [data-sp-teach="focus"] .student:not(.selected){opacity:.55;transition:opacity .25s}
 [data-sp-teach="focus"] .teacher-announcement{opacity:.55;transition:opacity .25s}
 [data-sp-teach="focus"] .student.selected .sw-ring{opacity:1}
@@ -24,64 +27,68 @@
 /* The ring: four round gold reason buttons with a filled icon, the points on a navy badge and the label under. */
 .sp-tring{position:absolute;z-index:20;width:0;height:0}
 .sp-trb{position:absolute;left:var(--dx);top:var(--dy);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;border:0;background:none;
-  font:800 18px/1.1 var(--text);color:#fff;white-space:nowrap;text-shadow:var(--shadowtext);animation:sp-tpop .3s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(var(--i,0) * 40ms)}
+  font:800 var(--fs-3)/1.1 var(--text);color:#fff;white-space:nowrap;text-shadow:var(--shadowtext);animation:sp-tpop .3s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i,0) * 40ms)}
 .sp-trb-disc{position:relative;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:var(--gold-fill);border:1px solid var(--gold-edge);color:#1A2550;
   box-shadow:inset 0 2px 0 rgba(255,255,255,.8),0 5px 0 var(--gold-press),0 14px 24px rgba(0,0,0,.45);transition:transform .08s,box-shadow .08s}
 .sp-trb-disc .sp-ti{width:44px;height:44px;fill:currentColor}
 .sp-trb:active .sp-trb-disc{transform:translateY(4px);box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 1px 0 var(--gold-press),0 6px 12px rgba(0,0,0,.4)}
-.sp-trb-badge{position:absolute;right:-8px;top:-8px;min-width:40px;height:34px;padding:0 10px;border-radius:999px;display:grid;place-items:center;font:900 19px/1 var(--text);color:var(--cream);
+.sp-trb-badge{position:absolute;right:-8px;top:-8px;min-width:40px;height:34px;padding:0 10px;border-radius:999px;display:grid;place-items:center;font:900 var(--fs-3)/1 var(--text);color:var(--cream);
   background:var(--panel);border:2px solid var(--star);box-shadow:0 4px 10px rgba(0,0,0,.4);text-shadow:none}
-.sp-tmore,.sp-tcap{position:absolute;z-index:20;transform:translateX(-50%);padding:10px 20px;border-radius:999px;font:800 18px/1 var(--text);color:var(--cream);white-space:nowrap;
+.sp-tmore,.sp-tcap{position:absolute;z-index:20;transform:translateX(-50%);padding:10px 20px;border-radius:999px;font:800 var(--fs-3)/1 var(--text);color:var(--cream);white-space:nowrap;
   background:var(--glass);border:1px solid rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:sp-tfade .3s ease-out both}
 .sp-tcap{pointer-events:none;font-weight:900;color:#fff;background:rgba(8,14,36,.72)}
 
 /* Undo: a small navy pill under the class tag for 30 seconds. */
 .sp-tundo{position:absolute;z-index:12;left:var(--sw-crest-left,48px);top:calc(var(--sw-crest-top,40px) + 84px);padding:9px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.18);
-  background:var(--glass);color:var(--cream);font:900 17px/1 var(--text);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 8px 18px rgba(0,0,0,.4);animation:sp-tslide .3s ease-out both}
+  background:var(--glass);color:var(--cream);font:900 var(--fs-2)/1 var(--text);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 8px 18px rgba(0,0,0,.4);animation:sp-tslide .3s ease-out both}
 .sp-tundo:active{transform:translateY(3px)}
 
 /* Sheets: More reasons, Screen, sign-in (the page's navy sheet). */
-.sp-teach-sheet{width:min(100%,520px)}
+.sp-teach-sheet,.sp-teach-sheet-out{width:min(100%,520px)}
 .sp-treasons{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.sp-treason{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 14px 8px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;font:900 17px/1.2 var(--text);text-align:left}
+.sp-treason{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 14px 8px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;font:900 var(--fs-2)/1.2 var(--text);text-align:left}
 .sp-treason-disc{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--gold-fill);border:1px solid var(--gold-edge);color:#1A2550;box-shadow:inset 0 2px 0 rgba(255,255,255,.8),0 3px 0 var(--gold-press)}
 .sp-treason-disc .sp-ti{width:24px;height:24px;fill:currentColor}
 .sp-treason-label{flex:1;min-width:0;overflow-wrap:anywhere}
 .sp-treason-pts{flex:none;color:var(--star)}
+.sp-treason-pts .sp-ti{display:block;width:20px;height:20px;fill:currentColor}
 .sp-treason-minus .sp-treason-disc{background:var(--glass);border-color:var(--glass-edge);color:var(--cream);box-shadow:none}
 .sp-treason-minus .sp-treason-pts{color:var(--bad)}
 .sp-treason-hatch .sp-treason-pts{color:var(--teal)}
 .sp-treason:active{transform:translateY(3px)}
 .sp-tpresets{display:flex;flex-wrap:wrap;gap:8px}
 .sp-tpreset{height:44px}
-.sp-tbanner{min-height:72px;font-size:18px;letter-spacing:0;resize:vertical}
-.sp-trow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;font:800 16px/1.2 var(--text);color:var(--cream)}
+.sp-tbanner{min-height:72px;font-size:var(--fs-3);letter-spacing:0;resize:vertical}
+.sp-trow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;font:800 var(--fs-2)/1.2 var(--text);color:var(--cream)}
 .sp-trow-label{min-width:0}
-.sp-tselect{width:auto;min-width:150px;min-height:44px;padding:6px 14px;font-size:16px;letter-spacing:0}
-.sp-tswitch{min-width:72px;height:40px;border-radius:999px;border:1px solid var(--glass-edge);background:rgba(8,14,36,.6);color:var(--cream-2);font:900 15px/1 var(--text)}
+.sp-tselect{width:auto;min-width:150px;min-height:44px;padding:6px 14px;font-size:var(--fs-2);letter-spacing:0}
+.sp-tswitch{min-width:72px;height:40px;border-radius:999px;border:1px solid var(--glass-edge);background:rgba(8,14,36,.6);color:var(--cream-2);font:900 var(--fs-2)/1 var(--text)}
 .sp-tswitch[aria-checked="true"]{background:rgba(95,215,188,.18);border-color:var(--teal);color:var(--teal)}
 .sp-teach-msg{color:var(--cream);max-width:none}
 .sp-tsave{align-self:stretch}
-.sp-tleave{align-self:center;font-size:15px}
+.sp-tleave{align-self:center;font-size:var(--fs-2)}
 .sp-teach-google{min-height:44px;display:flex;justify-content:center}
 .sp-tnote{position:fixed;z-index:60;left:50%;bottom:max(80px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;max-width:calc(100% - 32px);padding:12px 20px;border-radius:18px;
-  background:rgba(10,18,48,.94);color:var(--cream);font:800 16px/1.35 var(--text);text-align:center;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+  background:rgba(10,18,48,.94);color:var(--cream);font:800 var(--fs-2)/1.35 var(--text);text-align:center;box-shadow:0 10px 24px rgba(0,0,0,.5)}
 
+.sp-tghost{position:absolute;inset:0;z-index:20;pointer-events:none;animation:sp-tout .25s ease-out both}
+.sp-tghost *{animation:none!important}
+@keyframes sp-tout{to{opacity:0}}
 @keyframes sp-tpop{from{opacity:0;transform:translate(-50%,-50%) scale(.6)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes sp-tfade{from{opacity:0}to{opacity:1}}
 @keyframes sp-tslide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 
 /* Phones and portrait tablets: the same page is the remote; smaller discs, the corners closer in. */
 @media(max-width:640px),(max-width:1100px) and (orientation:portrait){
-  .sp-trb{font-size:14px;gap:5px;white-space:normal;width:92px;text-align:center;line-height:1.1}
+  .sp-trb{font-size:var(--fs-1);gap:5px;white-space:normal;width:92px;text-align:center;line-height:1.1}
   .sp-trb-disc{width:72px;height:72px}
   .sp-trb-disc .sp-ti{width:34px;height:34px}
-  .sp-trb-badge{min-width:34px;height:28px;padding:0 8px;font-size:16px;right:-6px;top:-6px}
-  .sp-tmore,.sp-tcap{font-size:15px;padding:9px 16px}
+  .sp-trb-badge{min-width:34px;height:28px;padding:0 8px;font-size:var(--fs-2);right:-6px;top:-6px}
+  .sp-tmore,.sp-tcap{font-size:var(--fs-2);padding:9px 16px}
   .sp-qb-screen{left:max(14px,env(safe-area-inset-left,0px));bottom:max(14px,env(safe-area-inset-bottom,0px))}
   .sp-qb-everyone{right:max(14px,env(safe-area-inset-right,0px));bottom:max(14px,env(safe-area-inset-bottom,0px))}
   .sp-qb-screen .sp-qb-disc,.sp-qb-everyone .sp-qb-disc,.sp-qb-manage .sp-qb-disc{width:60px;height:60px}
-  .sp-tundo{top:calc(var(--sw-crest-top,14px) + 64px);font-size:15px}
-  [data-sp-teach] .world .crest-text b::after{display:block;margin:4px 0 0;font-size:13px}
+  .sp-tundo{top:calc(var(--sw-crest-top,14px) + 64px);font-size:var(--fs-2)}
+  [data-sp-teach] .world .crest-text b::after{display:block;margin:4px 0 0;font-size:var(--fs-1)}
 }
-@media(prefers-reduced-motion:reduce){[data-sp-teach] .world-backdrop,.sp-trb,.sp-tmore,.sp-tcap,.sp-tundo,.sp-tdim{transition:none!important;animation:none!important}}
+@media(prefers-reduced-motion:reduce){[data-sp-teach] .world-backdrop,.sp-trb,.sp-tmore,.sp-tcap,.sp-tundo,.sp-tdim,.sp-tghost{transition:none!important;animation:none!important}.sp-tghost{display:none}}

@@ -1615,6 +1615,9 @@ details.cl-card[open]>summary::before{transform:rotate(45deg)}
 #cp-root .pts-delete{margin-left:auto;color:var(--sp-error,#a3263f)}
 /* Quests */
 #cp-root .pts-quests-btn{position:relative}
+/* Next look B (4 November 2026): the kit's filled icon in the place of the old glyph, the glyph's size. */
+#cp-root .pts-ki{display:inline-block;width:1em;height:1em;vertical-align:-.125em}
+#cp-root .pts-ki svg{display:block;width:100%;height:100%;fill:currentColor}
 #cp-root .pts-has-waiting{border-color:#e3a320;background:#fff5cc;color:#5b4300}
 .pts-badge{display:inline-grid;place-items:center;min-width:22px;height:22px;margin-left:6px;padding:0 6px;border-radius:999px;background:#e0484f;color:#fff;font-size:12px;font-weight:800;line-height:1}
 .pts-quests-dialog{width:min(100%,720px)}
@@ -9133,6 +9136,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     for (let i = 2; i < arguments.length; i++) add(n, arguments[i]);
     return n;
   }
+  // Next look B (4 November 2026): the kit's filled icons (hud/hud.html) in place of the glyphs the board's SPARKADE buttons
+  // already had (Quests, Edit). Same place, same size as the glyph (1em); no layout change.
+  const KIT = { list: '<rect x="3" y="5" width="18" height="3" rx="1.5"/><rect x="3" y="10.5" width="18" height="3" rx="1.5"/><rect x="3" y="16" width="12" height="3" rx="1.5"/>',
+    pen: '<path d="M3 21l1-4.5L15.5 5l3.5 3.5L7.5 20zM16.9 3.6l1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.4 1.4a1.5 1.5 0 0 1 0 2.1L20.4 7z"/>' };
+  const kit = name => h('span', { class: 'pts-ki', 'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" focusable="false">' + KIT[name] + '</svg>' });
   function add(n, kid) { if (kid == null || kid === false) return; if (Array.isArray(kid)) kid.forEach(k => add(n, k)); else n.append(kid.nodeType ? kid : document.createTextNode(String(kid))); }
   const store = () => { try { return window.localStorage; } catch (_) { return null; } };
   function readJson(key) { try { const s = store(); const raw = s && s.getItem(key); return raw ? JSON.parse(raw) : null; } catch (_) { return null; } }
@@ -9523,7 +9531,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     const canFull = !!(document.fullscreenEnabled && ui.stage.requestFullscreen);
     ui.fullBtn = canFull ? h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else { const p = ui.stage.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } } catch (_) { /* refused */ } } }, document.fullscreenElement === ui.stage ? 'Exit full screen' : 'Full screen') : null;
     const waiting = c ? (c.claims || []).length : 0;
-    ui.questsBtn = c ? h('button', { type: 'button', class: 'cp-secondary pts-small pts-quests-btn' + (waiting ? ' pts-has-waiting' : ''), onclick: () => openQuests() }, '🗺️ Quests', waiting ? h('span', { class: 'pts-badge', 'aria-label': waiting + ' waiting', text: String(waiting) }) : null) : null;
+    ui.questsBtn = c ? h('button', { type: 'button', class: 'cp-secondary pts-small pts-quests-btn' + (waiting ? ' pts-has-waiting' : ''), onclick: () => openQuests() }, kit('list'), ' Quests', waiting ? h('span', { class: 'pts-badge', 'aria-label': waiting + ' waiting', text: String(waiting) }) : null) : null;
     const tools = h('div', { class: 'pts-tools' }, ui.questsBtn, ui.selectToggle, ui.soundBtn, ui.fullBtn, h('button', { type: 'button', class: 'cp-secondary pts-small pts-screen-btn', onclick: () => openScreen() }, 'Pupil screen'), h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => { S.view = 'setup'; render(); } }, 'Set up class'));
     ui.selectBar = h('div', { class: 'pts-select-bar', hidden: true });
     if (!c) { ui.body.append(ui.tabs, ...(S.phase[S.classId] === 'loading' ? [h('div', { class: 'pts-panel pts-loading', role: 'status' }, h('p', { text: 'Opening ' + classLabel(S.classId) + '…' }))] : [])); return; }
@@ -9645,7 +9653,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       const tabs = h('div', { class: 'pts-seg', role: 'group', 'aria-label': 'Kind of points' }, [['plus', 'Well done'], ['minus', 'Needs work']].map(([k, label]) =>
         h('button', { type: 'button', class: 'pts-seg-btn pts-seg-' + k, 'aria-pressed': st.tab === k ? 'true' : 'false', onclick: () => { st.tab = k; S.awardTab = k; st.msg = ''; st.confirm = ''; draw('.pts-seg-' + k); } },
           label, h('span', { class: 'pts-seg-n', text: String(all.filter(b => (b.points > 0) === (k === 'plus')).length) }))));
-      const edit = opts.onPick ? h('button', { type: 'button', class: 'cp-secondary pts-small pts-edit-toggle', 'aria-pressed': st.editing ? 'true' : 'false', onclick: () => { st.editing = !st.editing; st.msg = ''; draw('.pts-edit-toggle'); } }, st.editing ? 'Done' : '✎ Edit') : null;
+      const edit = opts.onPick ? h('button', { type: 'button', class: 'cp-secondary pts-small pts-edit-toggle', 'aria-pressed': st.editing ? 'true' : 'false', onclick: () => { st.editing = !st.editing; st.msg = ''; draw('.pts-edit-toggle'); } }, st.editing ? 'Done' : [kit('pen'), ' Edit']) : null;
       const examples = P.isExampleSet(all) ? h('div', { class: 'pts-examples' }, h('span', { text: st.confirm === 'clear' ? 'Clear all the example buttons? Points already given stay.' : 'These buttons are examples. Change them, or clear them all and make your own.' }),
         h('button', { type: 'button', class: 'cp-secondary pts-small pts-clear', disabled: st.busy, onclick: clearExamples }, st.confirm === 'clear' ? 'Yes, clear them' : 'Clear examples')) : null;
       const tiles = list.map(b => h('button', { type: 'button', class: 'pts-tile pts-tile-' + st.tab + (st.editing ? ' pts-tile-editing' : ''), 'data-bid': b.behaviourId,

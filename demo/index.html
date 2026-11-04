@@ -15,17 +15,22 @@
    and --sw-span, --sw-vlim, --sw-prows on the scene). Layouts: the floor (TV, laptop, landscape tablet) and three to a
    row on phones and portrait tablets, where the page scrolls down and the plate, sky and weather stay fixed behind.
    Hosts may move the scene's furniture with --sw-cloth-top, --sw-crest-top, --sw-crest-left, --sw-front (the front feet
-   line), --sw-ptop and --sw-pbottom (phone reserves above and below the rows). */
+   line), --sw-ptop and --sw-pbottom (phone reserves above and below the rows).
+   4 November 2026 (next-look plan B, the polish pass): light and depth layers (.sw-light with the key light and two shafts,
+   .sw-vignette, .sw-fore), the living camera (sw-cam: a 20-second drift and zoom of the plate and the floor, at most four
+   percent, on `transform`; parallax from the module on `translate`; the teacher's focus lean on `scale`, so the three
+   compose), the award juice (.sw-fly sparkles to the crest, .sw-bump on the name tag's number, .sw-crest-bump), the
+   empty-state line (.sw-hint) and the frame budget overlay (.sw-fps). Every one of them stops under reduced motion. */
 :where(.world),:where(.world) *{box-sizing:border-box}
 :where(.world) button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 :where(.world) h2,:where(.world) p{margin:0}
-:where(.world) .sw-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+:where(.world) .sw-icon{width:20px;height:20px;fill:currentColor;stroke:none;flex-shrink:0}
 :where(.world) .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:1.8px;font-weight:750}
 :where(.world) .button{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:1px solid #ffffff32;border-radius:10px;padding:11px 16px;min-height:44px;font-weight:600}
 .sw-slot{display:contents}
 .world{--sw-font:"Nunito","Segoe UI",system-ui,-apple-system,sans-serif;--sw-back:52%;--sw-front:86%;--sw-door:34%;--sw-cloth-top:0px;--sw-crest-top:clamp(14px,2.1vw,40px);--sw-crest-left:clamp(16px,2.5vw,48px);
   --sw-unit:min(30vh,calc(100vw / var(--sw-span,5)),calc(var(--sw-vlim,40) * 1vh));position:fixed;inset:0;height:100vh;height:100dvh;background:#201c2b;color:#fff;overflow:hidden;isolation:isolate}
-.world-backdrop{position:absolute;inset:0;background-size:cover;background-position:50% 100%;background-repeat:no-repeat;z-index:-5}
+.world-backdrop{position:absolute;inset:0;background-size:cover;background-position:50% 100%;background-repeat:no-repeat;z-index:-5;will-change:transform}
 .sw-legible{position:absolute;inset:0 0 auto;height:16%;z-index:-1;pointer-events:none;background:linear-gradient(180deg,#060a1c47,#060a1c00)}
 .world .firefly{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff3bf;box-shadow:0 0 10px 3px #ffcc7160;pointer-events:none;animation:sw-firefly 6s ease-in-out infinite;z-index:1}
 
@@ -80,12 +85,12 @@
 .cloth-fabric small{display:block;padding-right:34px;font-weight:900;font-size:clamp(10px,.75vw,14px);line-height:1.2;letter-spacing:.16em;text-transform:uppercase;color:#8A6A2A}
 .cloth-fabric p{margin:6px 0 0;font-weight:800;font-size:clamp(15px,1.35vw,26px);line-height:1.25}
 .announcement-toggle{position:absolute;z-index:2;right:calc(7% + 12px);top:calc(clamp(26px,3.4vh,44px) + 8px);width:34px;height:24px;display:grid;place-items:center;border-radius:0 0 10px 10px;background:linear-gradient(180deg,#7A5226,#5E3F1C);color:#F7EBD0;box-shadow:0 3px 6px #00000059;pointer-events:auto}
-.announcement-toggle svg{width:16px;height:16px;transform:rotate(180deg);transition:transform .25s}
+.announcement-toggle svg{width:16px;height:16px;transform:rotate(90deg);transition:transform .25s ease-out}
 .announcement-toggle:focus-visible{outline:2px solid #F3D58A;outline-offset:2px}
 .teacher-announcement.collapsed{width:clamp(220px,18%,340px)}
 .teacher-announcement.collapsed .cloth-fabric{padding-top:7px;padding-bottom:9px}
 .teacher-announcement.collapsed .cloth-fabric p{display:none}
-.teacher-announcement.collapsed .announcement-toggle svg{transform:none}
+.teacher-announcement.collapsed .announcement-toggle svg{transform:rotate(-90deg)}
 
 /* The class crest (kit class tag): a medallion with the progress ring joined to the class name and one line. */
 .class-meter{display:flex;align-items:center;gap:14px;padding:0;border:0;background:none;text-align:left;font-family:var(--sw-font,inherit);color:inherit}
@@ -107,7 +112,9 @@
   .world:not(.home-world) .student{--sw-box:var(--sw-unit);--sw-side:var(--sw-pside,1);--sw-at:38%;--sw-zz:var(--sw-pz,10);left:var(--sw-px,50%);top:calc(var(--sw-ptop-eff) + var(--sw-prow,0) * var(--sw-prow-h) + var(--sw-unit) * .97)}
   .world:not(.home-world) .student-label>strong{font-size:16px}
   .world:not(.home-world) .student-sparkles{font-size:14px}
-  .world:not(.home-world) :is(.world-backdrop,.sky-overlay,.stars,.birds,.sw-legible,.weather,.fireflies,.hatch-stage,.confetti,.fireworks){position:fixed}
+  .world:not(.home-world) :is(.world-backdrop,.sky-overlay,.stars,.birds,.sw-light,.sw-legible,.sw-vignette,.sw-fore,.weather,.fireflies,.hatch-stage,.confetti,.fireworks){position:fixed}
+  .world:not(.home-world) :is(.world-backdrop,.sw-floor){animation:none}
+  .world:not(.home-world) .sw-hint{top:calc(var(--sw-ptop-eff) - 52px);width:min(86%,340px)}
   .teacher-announcement{width:90%}
   .teacher-announcement.collapsed{width:min(260px,70%)}
   .cloth-fabric p{font-size:15px}
@@ -125,14 +132,13 @@
 .world-load-panel{text-align:center;max-width:350px;color:#fff1d5}
 .world-load-symbol{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 20px;border:1px solid #e2c39a75;border-radius:50%;color:#e2c39a}
 .world-load-symbol svg{width:27px;height:27px}
-.world-load-panel h2{font:500 25px/1.3 Georgia,serif;letter-spacing:.2px}
-.world-load-message{margin:13px 0 0;font-size:13px;line-height:1.65;color:#c9c8cf}
+.world-load-panel h2{font:900 24px/1.3 var(--sw-font)}
+.world-load-message{margin:13px 0 0;font:700 16px/1.5 var(--sw-font);color:#c9c8cf}
 .world-loader .world-load-panel .button{margin:20px auto 0;background:#e2c39a;border-color:#e2c39a;color:#292925}
 .world-load-panel .button[hidden]{display:none}
 @media(max-width:640px){
   .world-loading .world-loader{padding:225px 24px 140px}
-  .world-load-panel h2{font-size:23px}
-  .world-load-message{font-size:12px}
+  .world-load-message{font-size:13px}
 }
 .fireflies{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
 .world .firefly{left:var(--fx);top:var(--fy);width:var(--fs,3px);height:var(--fs,3px);animation-duration:var(--ft,6s);animation-delay:var(--fd,0s)}
@@ -290,6 +296,54 @@
 @keyframes sw-flutter{0%,100%{transform:translateY(0) rotate(0)}15%{transform:translateY(-3%) rotate(-2deg)}30%{transform:translateY(0)}45%{transform:translateY(-4%) rotate(2deg)}60%{transform:translateY(0)}}
 @keyframes sw-sway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
 @keyframes sw-rock{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+/* Light (plan B 1): a warm key light at the top centre and two soft shafts over the plate (under the figures, so the name
+   tags and the cloth keep their contrast), a gentle vignette at the edges under the floor. Each sky tints them. Frame
+   budget (4 November 2026): the shafts stand still (their sway re-blurred them every frame) and blur 8 px, not 14; the
+   foreground strip blurs 4 px, not 7. */
+.sw-light{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;--sw-key:255,214,150;--sw-key-a:.55;--sw-shaft-a:.18}
+.sw-key{position:absolute;left:50%;top:-34%;width:96%;height:84%;transform:translateX(-50%);border-radius:50%;mix-blend-mode:soft-light;background:radial-gradient(closest-side,rgba(var(--sw-key),var(--sw-key-a)),rgba(var(--sw-key),calc(var(--sw-key-a) * .35)) 48%,rgba(var(--sw-key),0))}
+.sw-shaft{position:absolute;top:-12%;height:96%;width:13%;mix-blend-mode:screen;transform-origin:50% 0;background:linear-gradient(180deg,rgba(var(--sw-key),var(--sw-shaft-a)),rgba(var(--sw-key),calc(var(--sw-shaft-a) * .45)) 55%,rgba(var(--sw-key),0));filter:blur(8px)}
+.sw-shaft.s1{left:30%;rotate:-18deg}
+.sw-shaft.s2{left:57%;width:11%;rotate:14deg}
+.sw-vignette{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse 78% 74% at 50% 46%,rgba(5,8,24,0) 56%,rgba(5,8,24,.38) 84%,rgba(5,8,24,.56))}
+.sky-dawn .sw-light{--sw-key:255,190,170;--sw-key-a:.5;--sw-shaft-a:.14}
+.sky-day .sw-light{--sw-key:255,240,205;--sw-key-a:.45;--sw-shaft-a:.13}
+.sky-golden .sw-light{--sw-key:255,200,120;--sw-key-a:.6;--sw-shaft-a:.2}
+.sky-night .sw-light{--sw-key:170,190,255;--sw-key-a:.35;--sw-shaft-a:.04}
+.sky-night .sw-vignette{background:radial-gradient(ellipse 78% 74% at 50% 46%,rgba(3,5,18,0) 55%,rgba(3,5,18,.42) 84%,rgba(3,5,18,.6))}
+.weather-rain .sw-shaft{opacity:.4}
+
+/* Depth (plan B 2): a soft blurred foreground strip along the bottom edge (stones and leaves out of focus), under the floor
+   so it never crosses a name tag; the module moves the plate, the floor and the strip against each other (translate). */
+.sw-fore{position:absolute;left:-4%;right:-4%;bottom:-3%;height:13%;z-index:2;pointer-events:none;filter:blur(4px);opacity:.82;
+  background:radial-gradient(ellipse 16% 70% at 6% 100%,#1b140d,#1b140d00 70%),radial-gradient(ellipse 13% 60% at 30% 104%,#241a10e6,#241a1000 70%),radial-gradient(ellipse 18% 64% at 74% 104%,#1f170fe6,#1f170f00 70%),radial-gradient(ellipse 14% 76% at 96% 100%,#17110b,#17110b00 70%),linear-gradient(180deg,#0a081000,#0a0810a6)}
+.sky-night .sw-fore{opacity:.95}
+
+/* The living camera (plan B 3): the plate and the floor drift and zoom together over 20 seconds, never more than four
+   percent (scale at most 1.035, shift at most 0.8 percent); the teacher's focus pauses it (sparkade-teacher.css). */
+.world-backdrop,.sw-floor{transform-origin:50% 70%;animation:sw-cam 20s ease-in-out infinite alternate}
+.world-loading .world-backdrop,.world-loading .sw-floor{animation-play-state:paused}
+@keyframes sw-cam{0%{transform:none}50%{transform:translate(-.6%,-.3%) scale(1.02)}100%{transform:translate(.8%,0) scale(1.035)}}
+.home-world .world-backdrop,.home-world .sw-floor{animation:none}
+
+/* Award juice (plan B 4): sparkles fly from the pupil to the crest, the crest's medal bumps as they land, the name tag's
+   number bumps with a spring once it has counted up. */
+.sw-fly{position:absolute;inset:0;z-index:9;pointer-events:none;overflow:hidden}
+.sw-fly i{position:absolute;left:var(--x0);top:var(--y0);width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#FFE9AE;box-shadow:0 0 10px 3px #F3D58Acc;opacity:0;animation:sw-flytocrest 1s cubic-bezier(.5,0,.3,1) both;animation-delay:var(--fd,0s)}
+@keyframes sw-flytocrest{0%{opacity:0;scale:.6}12%{opacity:1;scale:1.1;translate:var(--fo,0) -36px}85%{opacity:1;scale:.8}100%{left:var(--x1);top:var(--y1);opacity:0;scale:.4;translate:0 0}}
+.student-sparkles.sw-bump{animation:sw-bump .6s cubic-bezier(.3,1.8,.5,1)}
+@keyframes sw-bump{0%{scale:1}30%{scale:1.32}60%{scale:.94}100%{scale:1}}
+.class-meter.sw-crest-bump .crest-medal{animation:sw-crestbump .65s cubic-bezier(.3,1.8,.5,1)}
+@keyframes sw-crestbump{0%{scale:1;filter:drop-shadow(0 6px 10px #00000080)}35%{scale:1.16;filter:drop-shadow(0 0 16px #F3D58A)}100%{scale:1}}
+
+/* Empty states (plan B 10): one line in the kit's voice above an empty or one-pupil floor. */
+.sw-hint{position:absolute;z-index:6;left:50%;top:calc(var(--sw-back) - 8%);transform:translateX(-50%);width:min(80%,560px);margin:0;padding:10px 20px;border-radius:999px;text-align:center;
+  font:800 16px/1.35 var(--sw-font);color:#F7EBD0;background:#080e2494;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);text-shadow:0 1px 0 #00000099;animation:sw-fadein .35s ease-out both}
+.world-loading .sw-hint{visibility:hidden}
+
+/* Frame budget (?fps=1): the median frames per second over 30 seconds and the pupil count, bottom centre. */
+.sw-fps{position:fixed;z-index:90;left:50%;bottom:max(14px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:8px 16px;border-radius:999px;font:900 16px/1 var(--sw-font);font-variant-numeric:tabular-nums;color:#F7EBD0;background:#0A1230e6;box-shadow:0 6px 14px #00000059;pointer-events:none;white-space:nowrap}
+
 /* Reduced motion: nothing moves and everyone is already in place. data-motion="reduced" forces the same. */
 @media(prefers-reduced-motion:reduce){
   .world,.world *,.world *:before,.world *:after{animation:none!important;transition:none!important}
@@ -973,7 +1027,18 @@ html,body{max-width:100%;overflow-x:hidden}
  * selected (studentIds marked as chosen), multi (pupils act as toggles), label (accessible scene name),
  * teacher (banner signature), bannerCollapsed, quiet (apply without reactions); mount options may also carry
  * onBanner(collapsed), onCrest(), onHatched(studentId) and walkIn:false. The banner toggle, the crest and the
- * hatch Continue button keep the stable hooks data-action="toggle-banner", "milestones" and "hatch-skip". */
+ * hatch Continue button keep the stable hooks data-action="toggle-banner", "milestones" and "hatch-skip".
+ *
+ * Polish pass (4 November 2026, next-look plan B): light (a warm key light at the top centre, two soft shafts, a gentle
+ * vignette) and depth (a blurred foreground strip, parallax of the plate against the figures on mouse move and on device
+ * tilt where DeviceOrientation needs no permission prompt) are overlay layers; the living camera is a 20-second CSS drift
+ * of the plate and the floor of at most four percent. react(id, delta, {from}) is the one award juice for every device:
+ * the cheer, a sparkle burst, a few sparkles flying to the crest and the name tag's number counting up with a spring;
+ * the diff of two snapshots plays it, and the teacher layer calls it for its own awards (quiet update first), so the two
+ * never double-play. sfx.duck(ms), when the caller's sfx has it, ducks the caller's ambient bed during the hatch, the
+ * fireworks and celebrations. Mount option fps:true shows the frame budget overlay (median frames per second over 30
+ * seconds and the pupil count). Empty states: a crest at zero says "Your first Sparkles will light the crest"; a class
+ * of none or one pupil gets a line of copy on the floor. Every motion stops with prefers-reduced-motion. */
 var SparkadeWorld = (function () {
   'use strict';
   var SPECIES = {
@@ -986,13 +1051,13 @@ var SparkadeWorld = (function () {
   var MILESTONES = [50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000];
   var SKIES = ['auto', 'dawn', 'day', 'golden', 'night'], WEATHERS = ['auto', 'clear', 'rain', 'snow'];
   var MODES = ['pupil', 'teacher', 'demo'], MOODS = ['great', 'okay', 'missing'];
+  // One icon set, filled and chunky (hud/hud.html, hud/room.html): f-star, and f-back for the cloth's tab.
   var ICONS = {
-    document: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Zm0 0v6h6M8 13h8M8 17h5',
-    chevron: 'm6 9 6 6 6-6',
-    spark: 'm12 2 2.7 7.3L22 12l-7.3 2.7L12 22l-2.7-7.3L2 12l7.3-2.7Z'
+    star: 'M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z',
+    back: 'M14.5 5.5L8 12l6.5 6.5 1.8-1.8L11.6 12l4.7-4.7z'
   };
-  // A filled four-point star in gold: the Sparkles glyph on every name tag.
-  var STAR = '<svg class="sw-star" viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICONS.spark + '"/></svg>';
+  // The kit's filled star in gold: the Sparkles glyph on every name tag.
+  var STAR = '<svg class="sw-star" viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICONS.star + '"/></svg>';
   var CONFETTI = ['#ffe7a3', '#ffb3c7', '#9fe2c3', '#9fc5ff', '#f1cf86', '#ffffff'];
   var ROCKETS = ['#ffe7a3', '#ffb3c7', '#9fe2c3', '#9fc5ff', '#f1cf86', '#ff9a5a', '#ffffff'];
   // Floor geometry in units of one figure box (the square avatar): the figure's width, the companion's box (about 45
@@ -1001,6 +1066,13 @@ var SparkadeWorld = (function () {
   // its name tags. TAG_HALF and FACE_HALF are half a name tag's and half a face's width, for the clearance test.
   var FIG = 0.56, PET = 0.46, PET_AT = 0.42, EGG_AT = 0.36, PET_HALF = 0.2, NEST_HALF = 0.13, GAP = 0.1, TIER = 1.45, TAG_HALF = 0.3, FACE_HALF = 0.15;
   var WALK_MS = 1200, STAGGER_S = 0.15;
+  // Award juice budget: sparkles per flight to the crest, how many pupils of one moment send them, and above how many
+  // pupils changing at once the bursts get lighter. Parallax reach in pixels at the edge of the screen (plate, floor,
+  // foreground strip) and the tilt that reaches it.
+  // Ambient particles. Plan B frame budget (4 November 2026): 22 fireflies, 46 stars, 70 raindrops and 48 snowflakes became
+  // 14, 30, 48 and 36 when 30 pupils measured under 50 frames per second in headless Chromium.
+  var FIREFLIES = 14, STARS = 30, RAIN = 48, SNOW = 36;
+  var FLY = 5, FLY_MAX = 6, MANY = 8, LOOK = {plate: -9, floor: 4, fore: 14}, TILT = 25, FPS_WINDOW = 30;
 
   function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
@@ -1080,7 +1152,7 @@ var SparkadeWorld = (function () {
       var row = [];
       for (k = base + (r >= rows - extra ? 1 : 0), i = 0; i < k; i++, at++) {
         var p = people[at], c = p && p.companion, side = (i + r) % 2 === 0 ? 1 : -1, reach = c ? (c.stage === 0 ? EGG_AT + NEST_HALF : PET_AT + PET_HALF) : 0, h = hash(p && p.studentId);
-        row.push({index: at, side: side, left: Math.max(FIG / 2, side < 0 ? reach : 0), right: Math.max(FIG / 2, side > 0 ? reach : 0), jx: ((h % 1000) / 1000 - 0.5) * 0.08, jy: (((h >>> 10) % 1000) / 1000 - 0.5) * 0.024});
+        row.push({index: at, side: side, left: Math.max(FIG / 2, side < 0 ? reach : 0), right: Math.max(FIG / 2, side > 0 ? reach : 0), jx: n === 1 ? 0 : ((h % 1000) / 1000 - 0.5) * 0.08, jy: n === 1 ? 0 : (((h >>> 10) % 1000) / 1000 - 0.5) * 0.024});
         if (i) pitch = Math.max(pitch, row[i - 1].right + GAP + row[i].left);
       }
       plan.push(row);
@@ -1138,7 +1210,7 @@ var SparkadeWorld = (function () {
   function stars(count) { var out = ''; for (var i = 0; i < count; i++) { var x = (i * 41) % 100, y = (i * 29) % 42, d = ((i * 11) % 50) / 10, size = i % 5 === 0 ? 3 : 2; out += '<i style="--sx:' + x + '%;--sy:' + y + '%;--sd:-' + d + 's;--ss:' + size + 'px"></i>'; } return out; }
   function weatherParticles(kind) {
     if (kind !== 'rain' && kind !== 'snow') return '';
-    var n = kind === 'rain' ? 70 : 48, out = '';
+    var n = kind === 'rain' ? RAIN : SNOW, out = '';
     for (var i = 0; i < n; i++) { var x = (i * 53) % 100, d = ((i * 17) % 40) / 10, t = kind === 'rain' ? 0.7 + ((i * 7) % 6) / 10 : 5 + ((i * 13) % 50) / 10, size = kind === 'snow' ? 3 + (i % 3) * 2 : 1; out += '<i style="--wx:' + x + '%;--wd:-' + d + 's;--wt:' + t + 's;--ws:' + size + 'px"></i>'; }
     return out;
   }
@@ -1154,8 +1226,13 @@ var SparkadeWorld = (function () {
       '<svg class="crest-medal" viewBox="0 0 124 124" aria-hidden="true"><circle cx="62" cy="62" r="56" fill="#15214A" stroke="#8A5F16" stroke-width="3"/><circle cx="62" cy="62" r="48" fill="none" stroke="#ffffff1f" stroke-width="10"/>' +
       (arc > 0 ? '<circle class="crest-ring" cx="62" cy="62" r="48" fill="none" stroke="#EBC56C" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + arc + ' ' + RING + '" transform="rotate(-90 62 62)"/>' : '') +
       '<path d="M62 30l8 20 20 8-20 8-8 20-8-20-20-8 20-8z" fill="#F3D58A" stroke="#6B4A0E" stroke-width="1.2"/></svg>' +
-      '<span class="crest-text"><b>' + esc(title) + '</b><small>✦ ' + total + (next ? ' of ' + next + ' · ' + (next - total) + ' more for fireworks' : ' · Every celebration earned') + '</small></span></button>';
+      '<span class="crest-text"><b>' + esc(title) + '</b><small>' + (total <= 0 ? FIRST : '✦ ' + total + (next ? ' of ' + next + ' · ' + (next - total) + ' more for fireworks' : ' · Every celebration earned')) + '</small></span></button>';
   }
+  // Empty states (plan B item 10): a sentence in the kit's voice wherever the scene would otherwise stand empty.
+  var FIRST = 'Your first Sparkles will light the crest';
+  var HINTS = {0: 'The courtyard is ready. Your class appears here as your teacher adds pupils.', 1: 'One pupil in the courtyard for now. Everyone your teacher adds stands here too.'};
+  // The median of a list of numbers (the frame budget overlay).
+  function median(list) { var a = (Array.isArray(list) ? list : []).filter(function (x) { return typeof x === 'number' && isFinite(x); }).sort(function (x, y) { return x - y; }), m = a.length >> 1; return a.length ? (a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2) : null; }
   function prefersReduced() { try { return typeof matchMedia === 'function' && !!matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
 
   function mount(root, options) {
@@ -1163,7 +1240,8 @@ var SparkadeWorld = (function () {
     var opts = options || {};
     var doc = root.ownerDocument || (typeof document !== 'undefined' ? document : null);
     var state = {snap: normalize(opts.snapshot), received: Date.now(), view: {chrome: {top: '', middle: '', bottom: ''}, selected: [], multi: false, focus: null, label: '', teacher: 'Charlie Teacher', collapsed: false},
-      ready: false, failed: false, alive: true, entering: {}, parts: null, timers: [], hatching: null, hatchQueue: [], skyTimer: null};
+      ready: false, failed: false, alive: true, entering: {}, parts: null, timers: [], hatching: null, hatchQueue: [], skyTimer: null,
+      counts: {}, look: null, unlisten: [], fps: {on: opts.fps === true, frames: 0, samples: [], since: 0, raf: 0}};
     var scene = null;
     applyView(opts);
     if (opts.walkIn !== false && !prefersReduced()) state.snap.students.forEach(function (p, i) { state.entering[p.studentId] = i; });
@@ -1171,6 +1249,8 @@ var SparkadeWorld = (function () {
     function later(fn, ms) { var id = setTimeout(function () { var k = state.timers.indexOf(id); if (k >= 0) state.timers.splice(k, 1); if (state.alive) fn(); }, ms); state.timers.push(id); return id; }
     function art(name) { try { return safeUrl(typeof opts.art === 'function' ? opts.art(name) : ''); } catch (e) { return ''; } }
     function play(name) { var s = opts.sfx; if (!s || s.enabled === false || typeof s.play !== 'function') return; try { s.play(name); } catch (e) { /* sound is optional */ } }
+    // The caller's ambient bed (if any) drops to a fifth for ms while a big moment plays.
+    function duck(ms) { var s = opts.sfx; if (!s || typeof s.duck !== 'function') return; try { s.duck(ms); } catch (e) { /* sound is optional */ } }
     function call(fn) { if (typeof fn !== 'function') return; try { fn.apply(null, Array.prototype.slice.call(arguments, 1)); } catch (e) { if (typeof console !== 'undefined' && console.error) console.error(e); } }
     function now() { var t = Date.parse(state.snap.now); return (isFinite(t) ? t : state.received) + (Date.now() - state.received); }
     function applyView(v) {
@@ -1212,11 +1292,11 @@ var SparkadeWorld = (function () {
       var b = state.snap.screen.banner, shut = state.view.collapsed;
       if (!b.on || !b.text) return '';
       return '<aside class="teacher-announcement ' + (shut ? 'collapsed' : '') + '" aria-label="Message from ' + esc(state.view.teacher) + '"><i class="cloth-rope l" aria-hidden="true"></i><i class="cloth-rope r" aria-hidden="true"></i><span class="cloth-rod" aria-hidden="true"></span>' +
-        '<button class="announcement-toggle" data-action="toggle-banner" data-sw="banner" aria-expanded="' + !shut + '" aria-label="' + (shut ? 'Show the message' : 'Roll up the message') + '">' + icon('chevron') + '</button>' +
+        '<button class="announcement-toggle" data-action="toggle-banner" data-sw="banner" aria-expanded="' + !shut + '" aria-label="' + (shut ? 'Show the message' : 'Roll up the message') + '">' + icon('back') + '</button>' +
         '<div class="cloth-fabric"><small>' + esc(state.view.teacher) + '</small><p>' + esc(b.text) + '</p></div></aside>';
     }
     function loaderHTML() {
-      return '<div class="world-loader" role="status" aria-live="polite"><div class="world-load-panel"><span class="world-load-symbol" aria-hidden="true">' + icon('spark') + '</span><h2>' + (state.failed ? 'The castle is taking a moment' : 'Entering SPARKADE…') + '</h2><p class="world-load-message">' + (state.failed ? 'Some artwork couldn’t load. Check your connection and try again.' : 'Preparing the courtyard and your class.') + '</p><button class="button" data-sw="retry"' + (state.failed ? '' : ' hidden') + '>Try again</button></div></div>';
+      return '<div class="world-loader" role="status" aria-live="polite"><div class="world-load-panel"><span class="world-load-symbol" aria-hidden="true">' + icon('star') + '</span><h2>' + (state.failed ? 'The castle is taking a moment' : 'Entering SPARKADE…') + '</h2><p class="world-load-message">' + (state.failed ? 'Some artwork couldn’t load. Check your connection and try again.' : 'Preparing the courtyard and your class.') + '</p><button class="button" data-sw="retry"' + (state.failed ? '' : ' hidden') + '>Try again</button></div></div>';
     }
     function slot(name, html) { return '<div class="sw-slot" data-sw-slot="' + name + '" style="display:contents">' + html + '</div>'; }
     function parts() {
@@ -1225,14 +1305,18 @@ var SparkadeWorld = (function () {
       shown.forEach(function (p, i) { pupils[p.studentId] = pupilHTML(p, s.students.indexOf(p), lay.items[i], home); order.push(p.studentId); });
       return {style: '--sw-span:' + lay.span + ';--sw-vlim:' + lay.vlim + ';--sw-prows:' + lay.prows, cls: 'world' + (state.ready ? '' : ' world-loading') + ' ' + (home ? 'home-world' : '') + ' sky-' + sky + ' weather-' + weather, sky: sky, weather: weather,
         label: v.label || (s.name ? s.name + ' castle' : 'SPARKADE castle'), particles: weatherParticles(weather), banner: bannerHTML(), crest: s.screen.crest && !home ? meter(s.total, s.name || 'Our class') : '',
-        top: v.chrome.top, middle: v.chrome.middle, bottom: v.chrome.bottom, pupils: pupils, order: order};
+        top: v.chrome.top, middle: v.chrome.middle, bottom: v.chrome.bottom, pupils: pupils, order: order,
+        hint: !home && has(HINTS, s.students.length) ? '<p class="sw-hint" data-sw-hint="' + s.students.length + '">' + HINTS[s.students.length] + '</p>' : ''};
     }
     function full(p) {
       var plate = esc(art('courtyard'));
       return '<main class="' + p.cls + '" style="' + p.style + '" data-sky="' + p.sky + '" data-weather="' + p.weather + '" aria-label="' + esc(p.label) + '" aria-busy="' + !state.ready + '"' + (prefersReduced() ? ' data-motion="reduced"' : '') + '>' +
         '<div class="world-backdrop" style="background-image:url(\'' + plate + '\')"></div><div class="sky-overlay" aria-hidden="true"></div>' +
-        '<div class="stars" aria-hidden="true">' + stars(46) + '</div><div class="birds" aria-hidden="true"><i class="bird"></i><i class="bird b2"></i><i class="bird b3"></i></div><div class="sw-legible" aria-hidden="true"></div><div class="weather" aria-hidden="true">' + p.particles + '</div><div class="fireflies" aria-hidden="true">' + fireflies(22) + '</div>' +
-        slot('top', p.top) + slot('banner', p.banner) + loaderHTML() + '<div class="sw-floor">' + p.order.map(function (id) { return p.pupils[id]; }).join('') + '</div>' + slot('middle', p.middle) + slot('crest', p.crest) + slot('bottom', p.bottom) + '</main>';
+        '<div class="stars" aria-hidden="true">' + stars(STARS) + '</div><div class="birds" aria-hidden="true"><i class="bird"></i><i class="bird b2"></i><i class="bird b3"></i></div>' +
+        '<div class="sw-light" aria-hidden="true"><i class="sw-key"></i><i class="sw-shaft s1"></i><i class="sw-shaft s2"></i></div><div class="sw-legible" aria-hidden="true"></div>' +
+        '<div class="sw-vignette" aria-hidden="true"></div><div class="sw-fore" aria-hidden="true"></div><div class="weather" aria-hidden="true">' + p.particles + '</div><div class="fireflies" aria-hidden="true">' + fireflies(FIREFLIES) + '</div>' +
+        slot('top', p.top) + slot('banner', p.banner) + loaderHTML() + slot('hint', p.hint) + '<div class="sw-floor">' + p.order.map(function (id) { return p.pupils[id]; }).join('') + '</div>' + slot('middle', p.middle) + slot('crest', p.crest) + slot('bottom', p.bottom) +
+        (state.fps.on ? '<div class="sw-fps" role="status" data-sw-fps="">' + fpsText() + '</div>' : '') + '</main>';
     }
 
     // Rendering: the first paint and any change the browser cannot patch rebuild the scene; later changes patch only
@@ -1242,6 +1326,7 @@ var SparkadeWorld = (function () {
       root.innerHTML = full(p);
       scene = typeof root.querySelector === 'function' ? root.querySelector('.world') : null;
       state.parts = p;
+      if (state.look) look(state.look.x, state.look.y);
     }
     function canPatch() { return !!(scene && state.parts && doc && scene.isConnected !== false && typeof scene.insertAdjacentHTML === 'function' && typeof scene.querySelector === 'function' && typeof doc.createElement === 'function'); }
     function fromHTML(html) { var t = doc.createElement('template'); t.innerHTML = html; return t.content ? t.content.firstElementChild : null; }
@@ -1260,7 +1345,7 @@ var SparkadeWorld = (function () {
       if (p.style !== old.style) scene.setAttribute('style', p.style);
       scene.setAttribute('data-sky', p.sky); scene.setAttribute('data-weather', p.weather); scene.setAttribute('aria-label', p.label); scene.setAttribute('aria-busy', String(!state.ready));
       if (p.particles !== old.particles) { var wx = scene.querySelector('.weather'); if (wx) wx.innerHTML = p.particles; }
-      ['top', 'banner', 'middle', 'crest', 'bottom'].forEach(function (name) {
+      ['top', 'banner', 'hint', 'middle', 'crest', 'bottom'].forEach(function (name) {
         if (p[name] === old[name]) return;
         var el = scene.querySelector('[data-sw-slot="' + name + '"]'); if (el) el.innerHTML = p[name];
       });
@@ -1328,19 +1413,62 @@ var SparkadeWorld = (function () {
 
     // Moments. Each adds a class or a short-lived overlay; the CSS does the moving.
     function restart(el, cls, ms) { if (!el || !el.classList) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); later(function () { el.classList.remove(cls); }, ms); }
-    function burst(id, label, minus) {
+    function burst(id, label, minus, count) {
       var target = pupilEl(id); if (!target || !doc || typeof target.appendChild !== 'function') return;
-      var el = doc.createElement('span'), rays = '';
-      for (var i = 0; i < 12; i++) rays += '<i style="--a:' + i * 30 + 'deg;--d:' + (44 + (i % 3) * 16) + 'px"></i>';
+      var el = doc.createElement('span'), rays = '', n = count || 12;
+      for (var i = 0; i < n; i++) rays += '<i style="--a:' + Math.round(i * 360 / n) + 'deg;--d:' + (44 + (i % 3) * 16) + 'px"></i>';
       el.className = 'spark-burst'; el.innerHTML = rays + '<b class="' + (minus ? 'minus' : '') + '">' + esc(label) + '</b>';
       target.appendChild(el); later(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1500);
     }
+    // The award juice, one implementation for every device (plan B item 4): the figure cheers (a droop for a minus), a
+    // sparkle burst rises from the pupil, a few sparkles fly to the crest and the name tag's number counts from `from`
+    // (default: the number shown minus delta) to the number shown, then bumps with a spring. o: {from, burst:false,
+    // fly:false, rays}. Reduced motion: the number is already final and nothing flies.
     function react(id, delta, o) {
       var el = pupilEl(id); if (!el) return;
+      o = o || {};
       restart(el, 'sw-wave', 950);
       var pet = el.querySelector ? el.querySelector('.scene-pet') : null, kind = delta < 0 ? 'droop' : 'cheer';
       if (pet && pet.classList) { pet.classList.remove('cheer', 'droop'); restart(pet, kind, kind === 'cheer' ? 1900 : 1600); }
-      if (typeof delta === 'number' && delta && !(o && o.burst === false)) burst(id, (delta > 0 ? '+' : '') + delta + ' ✦', delta < 0);
+      if (typeof delta !== 'number' || !delta) return;
+      if (o.burst !== false) burst(id, (delta > 0 ? '+' : '') + delta + ' ✦', delta < 0, o.rays);
+      count(id, delta, o.from);
+      if (delta > 0 && o.fly !== false) fly(id);
+    }
+    function shownPoints(id) { var p = state.snap.students.filter(function (x) { return x.studentId === id; })[0]; return p ? p.points : null; }
+    function count(id, delta, from) {
+      var to = shownPoints(id), token = {};
+      if (to == null || !state.snap.screen.sparkles || prefersReduced()) return;
+      from = typeof from === 'number' && isFinite(from) ? from : to - delta;
+      if (from === to) return;
+      state.counts[id] = token;
+      var steps = Math.min(12, Math.abs(to - from)), i = 0;
+      var tag = function () { var e = pupilEl(id); return e && e.querySelector ? e.querySelector('.student-sparkles') : null; };
+      var write = function (v) { var t = tag(), b = t && t.querySelector('b'); if (b) b.textContent = String(v); return t; };
+      write(from);
+      (function tick() {
+        later(function () {
+          if (state.counts[id] !== token) return;
+          i++;
+          var t = write(i >= steps ? to : Math.round(from + (to - from) * i / steps));
+          if (i < steps) tick(); else { delete state.counts[id]; restart(t, 'sw-bump', 650); }
+        }, 45);
+      })();
+    }
+    // A few sparkles fly from the pupil to the crest; the crest's medal bumps as they land.
+    function fly(id) {
+      if (prefersReduced() || !scene || !doc || typeof scene.querySelector !== 'function') return;
+      var crest = scene.querySelector('.crest-medal'), el = pupilEl(id);
+      if (!crest || !el) return;
+      var x0 = '50%', y0 = '62%', x1 = 'calc(var(--sw-crest-left) + 32px)', y1 = 'calc(var(--sw-crest-top) + 32px)';
+      try {
+        var w = scene.getBoundingClientRect(), a = el.getBoundingClientRect(), b = crest.getBoundingClientRect();
+        if (w.width && a.width && b.width) { x0 = Math.round(a.left + a.width / 2 - w.left) + 'px'; y0 = Math.round(a.top + a.height * 0.35 - w.top) + 'px'; x1 = Math.round(b.left + b.width / 2 - w.left) + 'px'; y1 = Math.round(b.top + b.height / 2 - w.top) + 'px'; }
+      } catch (e) { /* the fallback path from the middle of the floor */ }
+      var bits = '';
+      for (var i = 0; i < FLY; i++) bits += '<i style="--x0:' + x0 + ';--y0:' + y0 + ';--x1:' + x1 + ';--y1:' + y1 + ';--fd:' + (i * 0.07).toFixed(2) + 's;--fo:' + ((i % 3) - 1) * 26 + 'px"></i>';
+      overlay('sw-fly', bits, 1700);
+      later(function () { restart(scene && scene.querySelector('.class-meter'), 'sw-crest-bump', 700); }, 1000);
     }
     function grow(id) { var el = pupilEl(id), pet = el && el.querySelector ? el.querySelector('.scene-pet') : null; restart(pet, 'sw-grow', 1500); burst(id, '✦'); }
     function overlay(className, inner, ms) {
@@ -1353,13 +1481,14 @@ var SparkadeWorld = (function () {
       if (kind === 'fireworks') {
         var total = num(value, MILESTONES[level(state.snap.total) - 1] || state.snap.total), rockets = '';
         for (var i = 0; i < 7; i++) { var sparks = ''; for (var j = 0; j < 14; j++) sparks += '<i style="--a:' + (j * 25.7) + 'deg"></i>'; rockets += '<span class="rocket" style="--rx:' + (15 + i * 11) + '%;--rd:' + (i * 0.45) + 's;--rc:' + ROCKETS[i] + '">' + sparks + '</span>'; }
+        duck(5600);
         overlay('fireworks', rockets + '<div class="fireworks-title"><span class="eyebrow">Together</span><strong>✦ ' + esc(total) + '</strong><em>' + esc(state.snap.name) + ' did this as one class</em></div>', 5600);
         later(function () { play('fanfare'); }, 300);
         return;
       }
       var bits = '';
       for (var k = 0; k < 90; k++) bits += '<i style="--cx:' + (k * 37) % 100 + '%;--cd:' + ((k * 13) % 12) / 10 + 's;--ct:' + (2.6 + ((k * 7) % 14) / 10) + 's;--cc:' + CONFETTI[k % CONFETTI.length] + ';--cr:' + (k * 47) % 360 + 'deg"></i>';
-      overlay('confetti', bits, 4200);
+      overlay('confetti', bits, 4200); duck(4200);
       if (scene && scene.classList) { scene.classList.add('cheering'); later(function () { if (scene) scene.classList.remove('cheering'); }, 2200); }
       play('cheer');
     }
@@ -1392,6 +1521,7 @@ var SparkadeWorld = (function () {
       state.hatching = {id: id, el: el, finish: finish};
       var at = function (ms, fn) { timers.push(later(fn, quick ? Math.min(ms, 200) : ms)); };
       var add = function () { var names = arguments; if (el.classList) Array.prototype.forEach.call(names, function (n) { el.classList.add(n); }); };
+      duck(quick ? 900 : 6200);
       if (quick) { add('phase-reveal'); play('reveal'); at(900, finish); return true; }
       play('rumble');
       at(100, function () { add('phase-shake'); });
@@ -1426,7 +1556,10 @@ var SparkadeWorld = (function () {
     function moments(ev, view) {
       var bursts = !(view && view.burst === false);
       if (ev.ups.length) play('award'); else if (ev.downs.length) play('penalty');
-      ev.ups.concat(ev.downs).forEach(function (x) { react(x[0], x[1], {burst: bursts}); });
+      // A whole class rising at once: every pupil cheers and counts, but only the first few send sparkles to the crest
+      // and the bursts are lighter (the frame budget).
+      var many = ev.ups.length + ev.downs.length > MANY;
+      ev.ups.concat(ev.downs).forEach(function (x, i) { react(x[0], x[1], {burst: bursts, fly: i < FLY_MAX, rays: many ? 6 : 12}); });
       if (ev.eggs.length) { play('egg'); ev.eggs.forEach(function (id) { burst(id, '✦'); }); }
       if (ev.grows.length) { play('grow'); ev.grows.forEach(grow); }
       if (ev.confetti) celebrate('confetti');
@@ -1493,9 +1626,64 @@ var SparkadeWorld = (function () {
       }
     }
 
+    // Depth: the plate and the figures shift against each other as the mouse moves (TV, laptop) or the device tilts. Tilt is
+    // used only where DeviceOrientation needs no permission prompt (never asked for). The parallax sets the individual
+    // `translate` property, so the living camera (the `transform` animation in the CSS) and the teacher's focus lean (`scale`)
+    // compose with it.
+    function look(x, y) {
+      state.look = {x: x, y: y};
+      if (!scene || typeof scene.querySelector !== 'function') return;
+      [['.world-backdrop', LOOK.plate], ['.sw-floor', LOOK.floor], ['.sw-fore', LOOK.fore]].forEach(function (k) {
+        var el = scene.querySelector(k[0]);
+        if (el && el.style) el.style.translate = Math.round(x * k[1] * 10) / 10 + 'px ' + Math.round(y * k[1] * 6) / 10 + 'px';
+      });
+    }
+    function listen() {
+      var w = typeof window !== 'undefined' ? window : null;
+      if (!w || typeof w.addEventListener !== 'function') return;
+      var raf = typeof w.requestAnimationFrame === 'function' ? function (fn) { w.requestAnimationFrame(fn); } : function (fn) { fn(); }, want = null, queued = false;
+      var clamp = function (v) { return Math.max(-1, Math.min(1, v)); };
+      var aim = function (x, y) {
+        if (!state.alive || prefersReduced() || state.hatching) return;
+        want = {x: clamp(x), y: clamp(y)};
+        if (queued) return; queued = true;
+        raf(function () { queued = false; if (state.alive && want) look(want.x, want.y); });
+      };
+      var onMove = function (e) { if (!e || (e.pointerType && e.pointerType !== 'mouse')) return; var W = w.innerWidth || 0, H = w.innerHeight || 0; if (W && H) aim(e.clientX / W * 2 - 1, e.clientY / H * 2 - 1); };
+      var onTilt = function (e) { if (!e || typeof e.gamma !== 'number' || typeof e.beta !== 'number') return; aim(e.gamma / TILT, (e.beta - 45) / TILT); };
+      var on = function (type, fn) { w.addEventListener(type, fn, {passive: true}); state.unlisten.push(function () { w.removeEventListener(type, fn); }); };
+      on('pointermove', onMove);
+      var DOE = typeof DeviceOrientationEvent !== 'undefined' ? DeviceOrientationEvent : null;
+      if (DOE && typeof DOE.requestPermission !== 'function') on('deviceorientation', onTilt);
+    }
+
+    // Frame budget (?fps=1 on the pupils' page): frames counted each second, the median of the last 30 seconds shown with
+    // the pupil count, bottom centre in the kit's type. Hidden unless the host asks for it.
+    function fpsText() {
+      var m = median(state.fps.samples), n = state.snap.students.length;
+      return (m == null ? '… fps' : Math.round(m) + ' fps') + ' · median of ' + state.fps.samples.length + ' s · ' + n + (n === 1 ? ' pupil' : ' pupils');
+    }
+    function fpsLoop() {
+      var w = typeof window !== 'undefined' ? window : null, f = state.fps;
+      if (!f.on || !w || typeof w.requestAnimationFrame !== 'function') return;
+      var frame = function (t) {
+        if (!state.alive) return;
+        if (!f.since) f.since = t;
+        f.frames++;
+        if (t - f.since >= 1000) {
+          f.samples.push(f.frames * 1000 / (t - f.since)); if (f.samples.length > FPS_WINDOW) f.samples.shift();
+          f.frames = 0; f.since = t;
+          var el = scene && scene.querySelector('.sw-fps'), m = median(f.samples);
+          if (el) { el.textContent = fpsText(); el.setAttribute('data-sw-fps', String(m == null ? '' : Math.round(m * 10) / 10)); }
+        }
+        f.raf = w.requestAnimationFrame(frame);
+      };
+      f.raf = w.requestAnimationFrame(frame);
+    }
+
     var api = {
       update: update,
-      react: function (id, delta, o) { react(String(id), delta, o); return api; },
+      react: function (id, delta, o) { react(String(id), delta, o && typeof o === 'object' ? o : {}); return api; },
       hatch: function (id) { return hatch(String(id)); },
       celebrate: function (kind, value) { celebrate(kind, value); return api; },
       setScreen: setScreen,
@@ -1504,6 +1692,8 @@ var SparkadeWorld = (function () {
       destroy: function () {
         if (!state.alive) return;
         state.alive = false; state.timers.forEach(clearTimeout); state.timers = [];
+        state.unlisten.forEach(function (fn) { try { fn(); } catch (e) {} }); state.unlisten = [];
+        if (state.fps.raf && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(state.fps.raf);
         if (typeof root.removeEventListener === 'function') root.removeEventListener('click', onClick);
         root.innerHTML = ''; scene = null;
       }
@@ -1515,11 +1705,13 @@ var SparkadeWorld = (function () {
     if (typeof root.addEventListener === 'function') root.addEventListener('click', onClick);
     prepare();
     skyTick();
+    listen();
+    fpsLoop();
     return api;
   }
 
   return {version: 1, SPECIES: SPECIES, MILESTONES: MILESTONES, SKIES: SKIES, WEATHERS: WEATHERS, mount: mount, normalize: normalize, meter: meter,
-    seoulNow: seoulNow, skyFor: skyFor, weatherFor: weatherFor, skyNow: skyNow, weatherNow: weatherNow, floorLayout: floorLayout};
+    seoulNow: seoulNow, skyFor: skyFor, weatherFor: weatherFor, skyNow: skyNow, weatherNow: weatherNow, floorLayout: floorLayout, median: median, FIRST: FIRST, HINTS: HINTS};
 })();
 if (typeof window !== 'undefined' && window && typeof window === 'object') window.SparkadeWorld = SparkadeWorld;
 if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeWorld;

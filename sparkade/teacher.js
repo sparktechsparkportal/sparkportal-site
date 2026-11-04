@@ -266,6 +266,7 @@ host.say(who + '. Choose a reason, or tap outside to leave.');
 }
 function leaveFocus() {
 if (!T.focus) return;
+fadeRing();
 T.focus = null;
 var el = host.element(); if (el && T.on) el.setAttribute('data-sp-teach', 'on');
 host.draw({selected: [], multi: false});
@@ -305,13 +306,18 @@ if (typeof snap.total === 'number') snap.total += gained;
 host.setSnap(snap);
 return before;
 }
-function count(id, from, to) {
-var root = host.world() && host.world().element, b = null;
-try { b = root && root.querySelector ? root.querySelector('[data-id="' + String(id).replace(/["\\]/g, '') + '"] .student-sparkles b') : null; } catch (e) { b = null; }
-if (!b || from === to || host.reduceMotion()) return;
-var steps = Math.min(12, Math.abs(to - from)), i = 0;
-b.textContent = String(from);
-(function tick() { i++; b.textContent = String(i >= steps ? to : Math.round(from + (to - from) * i / steps)); if (i < steps) setTimeout(tick, 45); })();
+function fadeRing() {
+try {
+var el = host.element(), world = el && el.querySelector ? el.querySelector('.world') : null;
+if (!world || host.reduceMotion() || typeof world.querySelectorAll !== 'function') return;
+var parts = Array.prototype.slice.call(world.querySelectorAll('.sp-tring,.sp-tmore,.sp-tcap'));
+if (!parts.length) return;
+var ghost = doc.createElement('div');
+ghost.className = 'sp-tghost'; ghost.setAttribute('aria-hidden', 'true');
+ghost.innerHTML = parts.map(function (n) { return n.outerHTML; }).join('');
+world.appendChild(ghost);
+setTimeout(function () { if (ghost.parentNode) ghost.parentNode.removeChild(ghost); }, 300);
+} catch (e) { /* the redraw alone is enough */ }
 }
 function give(b) {
 var f = T.focus, snap = host.snap();
@@ -320,6 +326,7 @@ var ids = f.ids.slice(), batchId = newId(), classId = snap.classId, who = f.mode
 closeSheet();
 T.pending[batchId] = {ids: ids, points: b.points};
 var before = apply(ids, b.points);
+fadeRing();
 T.focus = null;
 var el = host.element(); if (el) el.setAttribute('data-sp-teach', 'on');
 dropUndo();
@@ -338,7 +345,7 @@ return false;
 });
 host.draw({selected: [], multi: false});
 host.sfx.play(b.points < 0 ? 'penalty' : 'award');
-ids.forEach(function (id) { host.world().react(id, b.points); count(id, before[id], before[id] + b.points); });
+ids.forEach(function (id) { host.world().react(id, b.points, {from: before[id]}); });
 T.undoTimer = setTimeout(function () { dropUndo(true); }, UNDO_MS);
 host.say(who + ' ' + signed(b.points) + ', ' + b.label + '.');
 }
@@ -351,7 +358,7 @@ var key = 'undo-' + u.batchId;
 T.pending[key] = {ids: u.ids, points: -u.points};
 var before = apply(u.ids, -u.points);
 host.draw({});
-u.ids.forEach(function (id) { host.world().react(id, -u.points, {burst: false}); count(id, before[id], before[id] - u.points); });
+u.ids.forEach(function (id) { host.world().react(id, -u.points, {burst: false, from: before[id]}); });
 host.say('Taken back: ' + u.who + ' ' + signed(u.points) + '.');
 Promise.resolve(u.saved).then(function (ok) {
 if (!ok) return null;
@@ -392,7 +399,7 @@ var back = host.h('div', {class: 'sp-sheet-back sp-teach-back', onclick: functio
 T.sheet = back; host.app.append(back);
 return sheet;
 }
-function closeSheet() { if (T.sheet) { T.sheet.remove(); T.sheet = null; } T.signHolder = null; }
+function closeSheet() { if (T.sheet) { if (typeof host.dismiss === 'function') host.dismiss(T.sheet); else T.sheet.remove(); T.sheet = null; } T.signHolder = null; }
 function more() {
 var f = T.focus;
 if (!f) return;
@@ -403,7 +410,7 @@ return host.h('button', {type: 'button', class: 'sp-treason' + (b.points < 0 ? '
 host.h('span', {class: 'sp-treason-disc', html: icon(iconFor(b.label))}), host.h('span', {class: 'sp-treason-label', text: b.label}), host.h('span', {class: 'sp-treason-pts', text: signed(b.points)}));
 });
 if (egg) rows.push(host.h('button', {type: 'button', class: 'sp-treason sp-treason-hatch', onclick: function () { hatch(p.studentId); }},
-host.h('span', {class: 'sp-treason-disc', html: icon('egg')}), host.h('span', {class: 'sp-treason-label', text: 'Hatch egg'}), host.h('span', {class: 'sp-treason-pts', text: '✦'})));
+host.h('span', {class: 'sp-treason-disc', html: icon('egg')}), host.h('span', {class: 'sp-treason-label', text: 'Hatch egg'}), host.h('span', {class: 'sp-treason-pts', html: icon('star')})));
 openSheet('More reasons', [host.h('h2', {class: 'sp-sheet-name', text: f.who}),
 rows.length ? host.h('div', {class: 'sp-treasons'}, rows) : host.h('p', {class: 'sp-sheet-note', text: 'The four reasons around the pupil are all there are. Add more in Manage.'}),
 host.h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick: closeSheet}, 'Close')]);
