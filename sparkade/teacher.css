@@ -67,7 +67,6 @@
 .sp-teach-msg{color:var(--cream);max-width:none}
 .sp-tsave{align-self:stretch}
 .sp-tleave{align-self:center;font-size:var(--fs-2)}
-.sp-teach-google{min-height:44px;display:flex;justify-content:center}
 .sp-tnote{position:fixed;z-index:60;left:50%;bottom:max(80px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;max-width:calc(100% - 32px);padding:12px 20px;border-radius:18px;
   background:rgba(10,18,48,.94);color:var(--cream);font:800 var(--fs-2)/1.35 var(--text);text-align:center;box-shadow:0 10px 24px rgba(0,0,0,.5)}
 

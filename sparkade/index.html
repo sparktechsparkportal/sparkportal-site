@@ -125,6 +125,15 @@ animation:var(--sw-pet-idle,sw-sway 3.6s ease-in-out infinite);animation-delay:v
 .student .sw-torso,.student .sw-head{will-change:transform}
 .student .sw-torso{clip-path:inset(30% 0 44% 0);transform-origin:50% 56%;animation:sw-breathe 3.9s ease-in-out infinite;animation-delay:var(--sw-breath,0s)}
 .student .sw-head{clip-path:inset(0 0 69% 0);transform-origin:50% 31%;animation:sw-tilt 6.8s ease-in-out infinite,sw-follow 3.9s ease-in-out infinite;animation-delay:var(--sw-head,0s),var(--sw-breath,0s)}
+.student .sw-figure-art .sw-pose{position:absolute;inset:0;display:block;transform-origin:50% 97%;animation:sw-figbreathe 3.9s ease-in-out infinite,sw-figsway 7.4s ease-in-out infinite;animation-delay:var(--sw-breath,0s),var(--sw-head,0s)}
+.student .sw-figure-img{position:absolute;left:0;top:-.66%;width:100%;height:100%;display:block;margin:0;object-fit:contain;pointer-events:none;-webkit-user-select:none;user-select:none}
+.student.sw-pose-crouch .sw-figure-img{transform:scaleX(calc(-1 * var(--sw-side)))}
+.student.sw-pose-crouch .scene-pet:not(.egg){--sw-at:30%}
+.student.sw-pose-crouch .sw-petshadow:not(.nest){left:calc(50% + var(--sw-side) * 30%)}
+.student.sw-pose-crouch .ground-shadow{width:46%}
+.cheering .student .sw-figure-art .sw-pose{animation:sw-bounce .5s ease-out 4}
+@keyframes sw-figbreathe{0%,100%{scale:1 1}50%{scale:1 1.012}}
+@keyframes sw-figsway{0%,100%{rotate:-.5deg}50%{rotate:.5deg}}
 @keyframes sw-idle{0%,100%{transform:translateY(0) rotate(-.35deg)}50%{transform:translateY(-1.5px) rotate(.35deg)}}
 @keyframes sw-breathe{0%,100%{scale:1 1}50%{scale:1 1.02}}
 @keyframes sw-follow{0%,100%{translate:0 0}50%{translate:0 -.52%}}
@@ -330,13 +339,10 @@ img{max-width:100%}
 .sp-i{width:1em;height:1em;fill:currentColor;flex:none}
 
 .sp-top{display:flex;justify-content:center;width:100%}
-.sp-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 13px 4px 10px;border-radius:999px;background:var(--pill-dark);color:var(--cream);font:900 var(--fs-2)/1.3 var(--text);font-variant-numeric:tabular-nums;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
-.sp-chip-star{display:inline-flex;color:var(--star)}
 .sp-pill-ic{display:inline-flex;margin-left:-4px}
 .sp-pill-ic .sp-i{width:18px;height:18px}
 .sp-grow-star,.sp-book-star{display:inline-flex;color:var(--star);vertical-align:-.1em}
 .sp-book-row em .sp-i{display:block}
-.sp-chip-word{font-weight:800;font-size:var(--fs-1);color:var(--cream-2)}
 .sp-link{min-height:44px;padding:0 4px;border:0;background:none;color:var(--cream);font:800 inherit/1 var(--text);text-decoration:underline;text-underline-offset:3px}
 .sp-pill{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;font:900 var(--fs-2)/1 var(--text);color:var(--cream);background:var(--glass);border:1px solid var(--glass-edge);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 6px 14px rgba(0,0,0,.35)}
 .sp-pill-gold{background:var(--gold-fill);border-color:var(--gold-edge);color:#1A2550;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 3px 0 var(--gold-press),0 8px 14px rgba(0,0,0,.35)}
@@ -359,7 +365,12 @@ img{max-width:100%}
 .sp-btn-quiet{min-height:48px;padding:10px 22px;border-radius:999px;border:1px solid var(--glass-edge);background:var(--glass);color:var(--cream);font:900 var(--fs-2)/1 var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 10px 22px rgba(0,0,0,.35)}
 .sp-btn-quiet:active{transform:translateY(4px)}
 
-.sp-open{display:flex;flex-direction:column;align-items:center;gap:14px;width:min(100%,380px);margin-top:max(4vh,12px);text-align:center}
+.sp-app-open{position:relative;max-width:none;min-height:100vh;min-height:100dvh;justify-content:center;isolation:isolate}
+.sp-open-plate{position:fixed;inset:0;z-index:-1;background:#0A1230 center bottom/cover no-repeat}
+.sp-open-plate::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 50% 45%,rgba(10,18,48,.62),rgba(6,10,28,.86) 100%)}
+.sp-open-noplate{background:radial-gradient(ellipse 80% 60% at 50% 20%,#1a2a60,#0A1230 70%) #0A1230}
+.sp-open{display:flex;flex-direction:column;align-items:center;gap:14px;width:min(100%,380px);margin-block:max(2vh,8px);text-align:center}
+.sp-open-teach{margin-top:2px;font-size:var(--fs-2);color:var(--cream-2)}
 .sp-open-mark{width:min(340px,86vw);margin-bottom:10px}
 .sp-fields{display:flex;flex-direction:column;gap:14px;width:100%;text-align:left}
 .sp-field-label{display:flex;flex-direction:column;gap:6px}
@@ -370,23 +381,8 @@ img{max-width:100%}
 .sp-open-help{margin:0;max-width:34ch;font:700 var(--fs-1)/1.45 var(--text);color:var(--cream-2)}
 .sp-pin-msg{margin:0;min-height:1.5em;font:800 var(--fs-2)/1.4 var(--text);color:var(--bad);max-width:34ch}
 
-.sp-pick{display:flex;flex-direction:column;gap:12px}
-.sp-names{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px;margin-top:6px}
-.sp-name{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;min-height:44px;padding:8px 6px 12px;border:1px solid var(--glass-edge);border-radius:20px;background:var(--glass);box-shadow:0 8px 18px rgba(0,0,0,.35)}
-.sp-name:hover{background:#1b2a5c}
-.sp-name-art{width:88px;height:88px}
-.sp-name-art>svg,.sp-pin-art>svg,.sp-room-me>svg{display:block;width:100%;height:100%}
-.sp-name-text{font:900 var(--fs-2)/1.3 var(--text);color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-room-me>svg{display:block;width:100%;height:100%}
 .sp-another{align-self:flex-start;margin-top:6px}
-.sp-pin{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
-.sp-pin-art{width:120px;height:120px}
-.sp-dots{display:flex;gap:16px;margin:14px 0 4px}
-.sp-dot{width:20px;height:20px;border-radius:50%;border:3px solid var(--star)}
-.sp-dot-on{background:var(--star)}
-.sp-keys{display:grid;grid-template-columns:repeat(3,72px);gap:12px;margin-top:8px}
-.sp-key{height:72px;border:1px solid var(--glass-edge);border-radius:50%;background:var(--glass);color:var(--cream);font:900 var(--fs-5)/1 var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px rgba(0,0,0,.4)}
-.sp-key:active{transform:translateY(4px);box-shadow:none}
-.sp-key-back{display:grid;place-items:center;font-size:var(--fs-5);color:var(--cream-2)}
 
 .sp-app-yard{display:block;max-width:none;margin:0;padding:0}
 .sp-world{position:relative;min-height:100vh;min-height:100dvh}
@@ -444,17 +440,8 @@ img{max-width:100%}
 @keyframes sp-fade{from{opacity:0}}
 @keyframes sp-fade-out{to{opacity:0}}
 .sp-grab{flex:none;width:44px;height:5px;border-radius:5px;background:rgba(255,255,255,.25);margin:0 auto 4px}
-.sp-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
 .sp-sheet-name{margin:0;font:900 var(--fs-4)/1.15 var(--text);color:#fff;overflow-wrap:anywhere}
-.sp-sheet-pet{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.06)}
-.sp-sheet-petimg{flex:none;width:84px;height:84px;object-fit:contain}
-.sp-sheet-petcopy{display:flex;flex-direction:column;gap:2px;min-width:0}
-.sp-sheet-petcopy strong{font:900 var(--fs-2)/1.3 var(--text);color:#fff}
-.sp-sheet-petcopy span{font:800 var(--fs-1)/1.35 var(--text);color:var(--teal)}
 .sp-sheet-note{margin:0;font:700 var(--fs-1)/1.4 var(--text);color:var(--cream-2)}
-.sp-recent{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-.sp-recent li{padding:6px 2px;font:800 var(--fs-2)/1.35 var(--text);color:var(--cream)}
-.sp-recent li+li{border-top:1px solid rgba(255,255,255,.08)}
 .sp-sheet-close{align-self:stretch;margin-top:4px}
 .sp-pet-none{display:grid;place-items:center;aspect-ratio:1;font-size:var(--fs-5);color:var(--star)}
 
@@ -522,6 +509,28 @@ img{max-width:100%}
 .sp-care-glow{animation:sp-glow 1.6s ease-out}
 @keyframes sp-glow{0%{box-shadow:inset 0 0 0 2px var(--teal),inset 0 0 80px rgba(95,215,188,.45)}100%{box-shadow:none}}
 @media(max-height:700px){.sp-room-block{gap:8px}.sp-care-disc{width:56px;height:56px}.sp-pet-name{font-size:var(--fs-3)}}
+.sp-room.sp-room-wide{width:100vw;min-height:0;height:100vh;height:100dvh}
+.sp-room-wide .sp-room-plate{background-position:center center}
+.sp-room-wide .sp-room-legible{background:linear-gradient(180deg,rgba(6,10,28,.5),transparent 16%),linear-gradient(270deg,rgba(6,10,28,.82) 0,rgba(6,10,28,.6) 26%,transparent 42%)}
+.sp-room-wide .sp-room-back{left:max(28px,env(safe-area-inset-left,0px));top:24px}
+.sp-room-wide .sp-room-mark{top:18px;width:150px}
+.sp-room-wide .sp-room-who{top:68px;font-size:var(--fs-3);padding:0 220px}
+.sp-room-wide .sp-room-fig{bottom:28%}
+.sp-room-wide .sp-room-me-fig{left:40%;width:min(30vw,52vh)}
+.sp-room-wide .sp-room-pet{left:20%;width:min(17vw,28vh)}
+.sp-room-figure .sp-room-me{filter:none}
+.sp-room-figimg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;object-fit:contain;-webkit-user-select:none;user-select:none}
+.sp-room-figure .sp-room-pet{left:32%}
+.sp-room-wide.sp-room-figure .sp-room-pet{left:28%}
+.sp-room-wide .sp-room-block{left:auto;right:max(32px,env(safe-area-inset-right,0px));top:50%;bottom:auto;transform:translateY(-44%);width:min(30vw,400px);gap:16px}
+.sp-room-wide .sp-pet-name{font-size:var(--fs-5)}
+.sp-room-wide .sp-care-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;justify-items:center}
+.sp-room-wide .sp-care-disc{width:76px;height:76px}
+.sp-room-wide .sp-care-disc>.sp-i{width:36px;height:36px}
+.sp-room-wide .sp-care-btn{font-size:var(--fs-2)}
+.sp-room-wide .sp-room-sparkles{position:relative;right:auto;top:auto;align-self:flex-start;height:46px;padding:0 20px;font-size:var(--fs-3)}
+.sp-room-wide .sp-room-foot{text-align:left}
+@media(max-height:620px){.sp-room-wide .sp-room-block{gap:10px}.sp-room-wide .sp-care-disc{width:60px;height:60px}.sp-room-wide .sp-care-actions{gap:10px 16px}}
 
 .sp-book-back,.sp-book-back-out{position:absolute;z-index:70}
 .sp-book,.sp-book-out{width:min(100%,460px);height:min(560px,78vh);height:min(560px,78dvh)}
@@ -542,11 +551,11 @@ img{max-width:100%}
 .sp-book-neg .sp-book-ic{background:var(--glass);color:var(--cream-2)}
 .sp-book-close{align-self:stretch;margin-top:4px;flex:none}
 
-@media(max-width:420px){.sp-keys{grid-template-columns:repeat(3,66px)}.sp-key{height:66px}.sp-care-actions{gap:12px}}
+@media(max-width:420px){.sp-care-actions{gap:12px}}
 .sp-teach-btn{position:fixed;z-index:13;right:max(16px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));min-height:44px;padding:8px 12px;border:0;background:none;color:var(--cream);font:800 var(--fs-2)/1 var(--text);text-shadow:var(--shadowtext);opacity:.7}
 .sp-teach-btn[hidden]{display:none}
 @media(prefers-reduced-motion:reduce){.sp-app *,.sp-app *:before,.sp-app *:after{animation:none!important;transition:none!important}}
-@media(forced-colors:active){.sp-card,.sp-name,.sp-sheet,.sp-qb-disc,.sp-pill,.sp-care-disc{border:1px solid CanvasText}}
+@media(forced-colors:active){.sp-card,.sp-sheet,.sp-qb-disc,.sp-pill,.sp-care-disc{border:1px solid CanvasText}}
 
 </style>
 </head>
@@ -990,6 +999,11 @@ if (typeof text !== 'string') return null;
 var parts = /^SA1-B(\d{2})-H(\d{2})-O(\d{2})$/.exec(text.trim());
 return parts ? parse({v: 1, body: 'body-' + parts[1], hair: 'hair-' + parts[2], outfit: 'outfit-' + parts[3]}) : null;
 }
+function figureName(input, pose) {
+var value = parse(input);
+if (!value || value.hair === 'hair-00' || (pose !== 'stand' && pose !== 'crouch')) return null;
+return value.body + '-' + value.hair + '-' + value.outfit + '-' + pose;
+}
 function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]; }); }
 function source(map, id) {
 if (!map || !has(map, id) || typeof map[id] !== 'string') return '';
@@ -1012,7 +1026,7 @@ if (!source(map, value.body)) out.push('<text x="512" y="512" text-anchor="middl
 out.push('</svg>');
 return out.join('');
 }
-return {CATALOG: CATALOG, parse: parse, record: record, fromLegacy: fromLegacy, resolve: resolve, code: code, fromCode: fromCode, svg: svg};
+return {CATALOG: CATALOG, parse: parse, record: record, fromLegacy: fromLegacy, resolve: resolve, code: code, fromCode: fromCode, figureName: figureName, svg: svg};
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAvatar;
 
@@ -1181,7 +1195,7 @@ var opts = options || {};
 var doc = root.ownerDocument || (typeof document !== 'undefined' ? document : null);
 var state = {snap: normalize(opts.snapshot), received: Date.now(), view: {chrome: {top: '', middle: '', bottom: ''}, selected: [], multi: false, focus: null, label: '', teacher: 'Charlie Teacher', collapsed: false},
 ready: false, failed: false, alive: true, entering: {}, parts: null, timers: [], hatching: null, hatchQueue: [], skyTimer: null,
-counts: {}, look: null, unlisten: [], fps: {on: opts.fps === true, frames: 0, samples: [], since: 0, raf: 0}};
+counts: {}, look: null, unlisten: [], figFailed: {}, fps: {on: opts.fps === true, frames: 0, samples: [], since: 0, raf: 0}};
 var scene = null;
 applyView(opts);
 if (opts.walkIn !== false && !prefersReduced()) state.snap.students.forEach(function (p, i) { state.entering[p.studentId] = i; });
@@ -1211,16 +1225,31 @@ var egg = c.stage === 0, src = esc(art(c.species + '-' + (c.stage || 'egg')));
 return '<span class="scene-pet ' + (egg ? 'egg' : '') + '" data-sw-pet="' + esc(p.studentId) + '" data-species="' + c.species + '" data-side="' + (it.side < 0 ? 'left' : 'right') + '" aria-hidden="true">' +
 (egg ? '<img src="' + src + '" alt="" class="sw-egg"><img src="' + esc(art('nest')) + '" alt="" class="sw-nest">' : '<img src="' + src + '" alt="">') + '</span><span class="sw-petshadow' + (egg ? ' nest' : '') + '" aria-hidden="true"></span>';
 }
+function poseOf(p, home) { var c = p.companion; return c && (home || c.stage >= 1) ? 'crouch' : 'stand'; }
+function figureOf(p, pose) {
+if (typeof opts.figure !== 'function' || has(state.figFailed, p.studentId)) return '';
+try { return safeUrl(opts.figure(p, pose)); } catch (e) { return ''; }
+}
+function figureFailed(img) {
+var el = img && typeof img.closest === 'function' ? img.closest('.student') : null, id = el && el.getAttribute('data-id');
+if (!id || has(state.figFailed, id)) return;
+state.figFailed[id] = true;
+if (state.parts && state.alive) render();
+}
+function onError(e) { var t = e && e.target; if (t && t.classList && t.classList.contains('sw-figure-img')) figureFailed(t); }
+function figureHTML(src, pose, it) {
+return '<span class="sw-figure sw-figure-art" aria-hidden="true"><span class="sw-pose"><img class="sw-figure-img" src="' + esc(src) + '" alt="" draggable="false" data-pose="' + pose + '" data-side="' + (it.side < 0 ? 'left' : 'right') + '"></span></span>';
+}
 function pupilHTML(p, i, it, home) {
-var s = state.snap, v = state.view, id = p.studentId, h = hash(id), a = avatarOf(p);
+var s = state.snap, v = state.view, id = p.studentId, h = hash(id), pose = poseOf(p, home), fig = figureOf(p, pose), a = fig ? '' : avatarOf(p);
 var chosen = v.selected.indexOf(id) >= 0, entering = has(state.entering, id);
-var label = home ? 'View your Sparkles' : s.mode === 'pupil' ? esc(p.name) + '’s card' : 'Open ' + esc(p.name) + '’s profile';
+var label = home ? 'View your Sparkles' : s.mode === 'pupil' ? esc(p.name) + '’s room' : 'Open ' + esc(p.name) + '’s profile';
 if (s.screen.sparkles) label += ', ' + p.points + ' Sparkles';
 var style = '--sw-t:' + it.t + ';' + (it.k ? '--sw-k:' + it.k + ';' : '') + (it.k1 ? '--sw-t1:' + it.t1 + ';--sw-k1:' + it.k1 + ';--sw-r1:' + it.r1 + ';' : '') + (it.k2 ? '--sw-t2:' + it.t2 + ';--sw-k2:' + it.k2 + ';--sw-r2:' + it.r2 + ';' : '') + '--sw-s:' + it.s + ';--sw-ox:' + it.ox + ';--sw-tside:' + it.side + ';--z:' + it.z +
 ';--sw-px:' + it.px + '%;--sw-prow:' + it.prow + ';--sw-pside:' + it.pside + ';--sw-pz:' + it.pz + ';--delay:-' + (i * 0.7).toFixed(1) + 's' +
 ';--sw-head:-' + ((h % 6800) / 1000).toFixed(2) + 's;--sw-breath:-' + (((h >>> 12) % 3900) / 1000).toFixed(2) + 's' + (entering ? ';--sw-in:' + (state.entering[id] * STAGGER_S).toFixed(2) + 's' : '');
-return '<button class="student ' + (chosen ? 'selected' : '') + (entering ? ' sw-enter' : '') + '" style="' + style + '" data-sw-pupil="' + esc(id) + '" data-id="' + esc(id) + '" data-row="' + it.row + '" aria-label="' + label + '"' + (v.multi ? ' aria-pressed="' + chosen + '"' : '') + '>' +
-'<span class="sw-ring" aria-hidden="true"></span><span class="ground-shadow" aria-hidden="true"></span><span class="sw-figure" aria-hidden="true"><span class="sw-doll"><span class="sw-band sw-legs">' + a + '</span><span class="sw-band sw-torso">' + a + '</span><span class="sw-band sw-head">' + a + '</span></span></span>' +
+return '<button class="student ' + (chosen ? 'selected' : '') + (entering ? ' sw-enter' : '') + (fig ? ' sw-pose-' + pose : '') + '" style="' + style + '" data-sw-pupil="' + esc(id) + '" data-id="' + esc(id) + '" data-row="' + it.row + '" aria-label="' + label + '"' + (v.multi ? ' aria-pressed="' + chosen + '"' : '') + '>' +
+'<span class="sw-ring" aria-hidden="true"></span><span class="ground-shadow" aria-hidden="true"></span>' + (fig ? figureHTML(fig, pose, it) : '<span class="sw-figure" aria-hidden="true"><span class="sw-doll"><span class="sw-band sw-legs">' + a + '</span><span class="sw-band sw-torso">' + a + '</span><span class="sw-band sw-head">' + a + '</span></span></span>') +
 petHTML(p, it) + '<span class="student-label"><strong>' + esc(p.name) + '</strong>' + (s.screen.sparkles ? '<span class="student-sparkles">' + STAR + '<b>' + p.points + '</b><span class="sparkles-word"> Sparkles</span></span>' : '') + '</span></button>';
 }
 function bannerHTML() {
@@ -1327,7 +1356,9 @@ if (typeof Image !== 'function' || typeof Promise !== 'function' || !scene || ty
 var at = Date.now(), here = scene, backdrop = new Image();
 if (here.dataset) here.dataset.assetsState = 'loading';
 backdrop.src = art('courtyard');
-Promise.all([backdrop].concat(Array.prototype.slice.call(here.querySelectorAll('.sw-floor img, .sw-slot img'))).map(decode)).then(function () {
+Promise.all([backdrop].concat(Array.prototype.slice.call(here.querySelectorAll('.sw-floor img, .sw-slot img'))).map(function (img) {
+return img.classList && img.classList.contains('sw-figure-img') ? decode(img).then(null, function () { figureFailed(img); }) : decode(img);
+})).then(function () {
 if (!state.alive || scene !== here) return;
 state.ready = true; state.failed = false;
 here.classList.remove('world-loading'); here.setAttribute('aria-busy', 'false');
@@ -1608,7 +1639,7 @@ if (!state.alive) return;
 state.alive = false; state.timers.forEach(clearTimeout); state.timers = [];
 state.unlisten.forEach(function (fn) { try { fn(); } catch (e) {} }); state.unlisten = [];
 if (state.fps.raf && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(state.fps.raf);
-if (typeof root.removeEventListener === 'function') root.removeEventListener('click', onClick);
+if (typeof root.removeEventListener === 'function') { root.removeEventListener('click', onClick); root.removeEventListener('error', onError, true); }
 root.innerHTML = ''; scene = null;
 }
 };
@@ -1616,7 +1647,7 @@ Object.defineProperty(api, 'alive', {get: function () { return state.alive; }});
 Object.defineProperty(api, 'element', {get: function () { return scene; }});
 
 rebuild();
-if (typeof root.addEventListener === 'function') root.addEventListener('click', onClick);
+if (typeof root.addEventListener === 'function') { root.addEventListener('click', onClick); root.addEventListener('error', onError, true); }
 prepare();
 skyTick();
 listen();
@@ -1635,9 +1666,9 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeWo
 <script>
 var SP_KEY = new URLSearchParams(location.search).get("points") || "";
 window.SP_GATEWAY = "https://script.google.com/macros/s/AKfycbz_yisUT04XOY23wQSd2Yzps9EfkE6C_W73QTh2XydzSyRlLQTlm4tEeS9GW5IVWOuK/exec";
-window.SP_GATEWAY_CLIENT = "313510619105-irt8a6pde830lqes16lb2sdnsm0d1c28.apps.googleusercontent.com";
-window.SP_TEACHER = {"js":"teacher.js?v=0185ed753d","css":"teacher.css?v=84fa2a405d"};
-var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","courtyard":"art/courtyard.webp","room":"art/room.webp","nest":"art/nest.webp","dragon-egg":"art/dragon-egg.webp","dragon-1":"art/dragon-1.webp","dragon-2":"art/dragon-2.webp","dragon-3":"art/dragon-3.webp","dragon-4":"art/dragon-4.webp","dragon-5":"art/dragon-5.webp","wolf-egg":"art/wolf-egg.webp","wolf-1":"art/wolf-1.webp","wolf-2":"art/wolf-2.webp","wolf-3":"art/wolf-3.webp","wolf-4":"art/wolf-4.webp","wolf-5":"art/wolf-5.webp","sunbird-egg":"art/sunbird-egg.webp","sunbird-1":"art/sunbird-1.webp","sunbird-2":"art/sunbird-2.webp","sunbird-3":"art/sunbird-3.webp","sunbird-4":"art/sunbird-4.webp","sunbird-5":"art/sunbird-5.webp","otter-egg":"art/otter-egg.webp","otter-1":"art/otter-1.webp","otter-2":"art/otter-2.webp","otter-3":"art/otter-3.webp","otter-4":"art/otter-4.webp","otter-5":"art/otter-5.webp","grove-egg":"art/grove-egg.webp","grove-1":"art/grove-1.webp","grove-2":"art/grove-2.webp","grove-3":"art/grove-3.webp","grove-4":"art/grove-4.webp","grove-5":"art/grove-5.webp"};
+window.SP_TEACHER = {"js":"teacher.js?v=164a9d009a","css":"teacher.css?v=a1bd296cb4"};
+window.SP_FIGURES = (function (p, n, m) { n.split(" ").forEach(function (k) { m[k] = p + k + ".webp"; }); return m; })("figures/", "body-01-hair-01-outfit-01-stand body-01-hair-01-outfit-01-crouch body-01-hair-01-outfit-02-stand body-01-hair-01-outfit-02-crouch body-01-hair-01-outfit-03-stand body-01-hair-01-outfit-03-crouch body-01-hair-02-outfit-01-stand body-01-hair-02-outfit-01-crouch body-01-hair-02-outfit-02-stand body-01-hair-02-outfit-02-crouch body-01-hair-02-outfit-03-stand body-01-hair-02-outfit-03-crouch body-01-hair-03-outfit-01-stand body-01-hair-03-outfit-01-crouch body-01-hair-03-outfit-02-stand body-01-hair-03-outfit-02-crouch body-01-hair-03-outfit-03-stand body-01-hair-03-outfit-03-crouch body-01-hair-04-outfit-01-stand body-01-hair-04-outfit-01-crouch body-01-hair-04-outfit-02-stand body-01-hair-04-outfit-02-crouch body-01-hair-04-outfit-03-stand body-01-hair-04-outfit-03-crouch body-02-hair-01-outfit-01-stand body-02-hair-01-outfit-01-crouch body-02-hair-01-outfit-02-stand body-02-hair-01-outfit-02-crouch body-02-hair-01-outfit-03-stand body-02-hair-01-outfit-03-crouch body-02-hair-02-outfit-01-stand body-02-hair-02-outfit-01-crouch body-02-hair-02-outfit-02-stand body-02-hair-02-outfit-02-crouch body-02-hair-02-outfit-03-stand body-02-hair-02-outfit-03-crouch body-02-hair-03-outfit-01-stand body-02-hair-03-outfit-01-crouch body-02-hair-03-outfit-02-stand body-02-hair-03-outfit-02-crouch body-02-hair-03-outfit-03-stand body-02-hair-03-outfit-03-crouch body-02-hair-04-outfit-01-stand body-02-hair-04-outfit-01-crouch body-02-hair-04-outfit-02-stand body-02-hair-04-outfit-02-crouch body-02-hair-04-outfit-03-stand body-02-hair-04-outfit-03-crouch body-03-hair-01-outfit-01-stand body-03-hair-01-outfit-01-crouch body-03-hair-01-outfit-02-stand body-03-hair-01-outfit-02-crouch body-03-hair-01-outfit-03-stand body-03-hair-01-outfit-03-crouch body-03-hair-02-outfit-01-stand body-03-hair-02-outfit-01-crouch body-03-hair-02-outfit-02-stand body-03-hair-02-outfit-02-crouch body-03-hair-02-outfit-03-stand body-03-hair-02-outfit-03-crouch body-03-hair-03-outfit-01-stand body-03-hair-03-outfit-01-crouch body-03-hair-03-outfit-02-stand body-03-hair-03-outfit-02-crouch body-03-hair-03-outfit-03-stand body-03-hair-03-outfit-03-crouch body-03-hair-04-outfit-01-stand body-03-hair-04-outfit-01-crouch body-03-hair-04-outfit-02-stand body-03-hair-04-outfit-02-crouch body-03-hair-04-outfit-03-stand body-03-hair-04-outfit-03-crouch", {});
+var SP_ART = {"castle":"art/castle.webp","wordmark":"art/wordmark.webp","courtyard":"art/courtyard.webp","room":"art/room.webp","room-wide":"art/room-wide.webp","nest":"art/nest.webp","dragon-egg":"art/dragon-egg.webp","dragon-1":"art/dragon-1.webp","dragon-2":"art/dragon-2.webp","dragon-3":"art/dragon-3.webp","dragon-4":"art/dragon-4.webp","dragon-5":"art/dragon-5.webp","wolf-egg":"art/wolf-egg.webp","wolf-1":"art/wolf-1.webp","wolf-2":"art/wolf-2.webp","wolf-3":"art/wolf-3.webp","wolf-4":"art/wolf-4.webp","wolf-5":"art/wolf-5.webp","sunbird-egg":"art/sunbird-egg.webp","sunbird-1":"art/sunbird-1.webp","sunbird-2":"art/sunbird-2.webp","sunbird-3":"art/sunbird-3.webp","sunbird-4":"art/sunbird-4.webp","sunbird-5":"art/sunbird-5.webp","otter-egg":"art/otter-egg.webp","otter-1":"art/otter-1.webp","otter-2":"art/otter-2.webp","otter-3":"art/otter-3.webp","otter-4":"art/otter-4.webp","otter-5":"art/otter-5.webp","grove-egg":"art/grove-egg.webp","grove-1":"art/grove-1.webp","grove-2":"art/grove-2.webp","grove-3":"art/grove-3.webp","grove-4":"art/grove-4.webp","grove-5":"art/grove-5.webp"};
 (function () {
 'use strict';
 var P = PointsCore, V = typeof SparkadeAvatar !== 'undefined' ? SparkadeAvatar : null, W = typeof SparkadeWorld !== 'undefined' ? SparkadeWorld : null;
@@ -1645,10 +1676,10 @@ var KEY = typeof SP_KEY === 'string' ? SP_KEY : '', ART = typeof SP_ART === 'obj
 var app = document.getElementById('sp-app'), live = document.getElementById('sp-live');
 var STORE = 'spark-points-' + KEY, LAST = 'spark-points-last', CLIENT = 'spark-points-client', SOUND = 'spark-points-sound', WORD = P.CURRENCY.many, device = null, timings = [];
 var POLL_MS = 45000, BACKOFF = [5000, 10000, 20000, 40000];
-var S = {request: 0, yard: 0, busy: false, roster: null, board: null, pin: '', picked: null, pinKeys: null, careTimer: 0, code: '',
-snap: null, world: null, host: null, layer: null, sheet: null, book: null, note: null, poll: 0, polledAt: 0, fails: 0, replay: 0, heard: false,
+var S = {request: 0, yard: 0, busy: false, board: null, careTimer: 0, code: '', hintTimer: 0, wide: null,
+snap: null, world: null, host: null, layer: null, book: null, note: null, poll: 0, polledAt: 0, fails: 0, replay: 0, heard: false,
 titled: false, reveal: null, revealTimer: 0, again: false, teachAfter: false, teachLoad: null};
-var T = null, TEACH = 'spark-teacher';
+var T = null, TEACH = 'spark-teacher-';
 var REVEAL_MS = 2000, FADE_MS = 400, TEACHER = 'Charlie Teacher';
 
 function h(tag, attrs) {
@@ -1666,9 +1697,10 @@ function saved() {
 if (device !== null) return device;
 try { var raw = JSON.parse(window.localStorage.getItem(STORE) || '{}'); device = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}; }
 catch (e) { device = {}; }
+if ('session' in device) { delete device.session; save(device); }
 return device;
 }
-function save(value) { device = value; try { window.localStorage.setItem(STORE, JSON.stringify(value)); } catch (e) { /* The signed session still works for this visit. */ } }
+function save(value) { device = value; try { window.localStorage.setItem(STORE, JSON.stringify(value)); } catch (e) { /* The page still works for this visit. */ } }
 function remember(name, value) { try { if (value) window.localStorage.setItem(name, value); else window.localStorage.removeItem(name); } catch (e) {} }
 function recall(name) { try { return String(window.localStorage.getItem(name) || ''); } catch (e) { return ''; } }
 function useKey(key) { KEY = key; STORE = 'spark-points-' + KEY; device = null; }
@@ -1697,24 +1729,27 @@ var shelf = document.body;
 if (shelf && shelf !== el.parentNode && typeof shelf.appendChild === 'function') shelf.appendChild(el);
 setTimeout(function () { el.remove(); }, OUT_MS);
 }
-function esc(text) { return String(text == null ? '' : text).replace(/[&<>"']/g, function (ch) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]; }); }
 function art(name) { return typeof ART[name] === 'string' && /^(data:image\/webp;base64,[A-Za-z0-9+/=]+|[A-Za-z0-9_./-]+\.webp)$/.test(ART[name]) ? ART[name] : ''; }
 function avatar(s, label) { return V ? V.svg({avatarV2: s.avatarV2, look: s.look, seed: s.studentId, wear: s.wear, label: label || ''}) : ''; }
+function figure(s, pose) {
+var map = typeof window !== 'undefined' && window.SP_FIGURES && typeof window.SP_FIGURES === 'object' ? window.SP_FIGURES : null;
+if (!map || !V || typeof V.figureName !== 'function') return '';
+var name = V.figureName(V.resolve(s.avatarV2, s.look, s.studentId), pose), url = name && Object.prototype.hasOwnProperty.call(map, name) ? map[name] : '';
+return typeof url === 'string' && /^(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.webp$/.test(url) ? url : '';
+}
 function kind(species) { var k = W && W.SPECIES[species]; return k || {name: 'Companion', stages: ['Young', 'Young', 'Young', 'Young', 'Young']}; }
 function petPicture(species, stage, cls) {
 var k = kind(species), src = art(species + '-' + (stage || 'egg')), alt = stage ? k.name + ', ' + k.stages[stage - 1] : k.name + ' egg';
 return src ? h('img', {class: cls, src: src, alt: alt, draggable: 'false', decoding: 'async'}) : h('span', {class: cls + ' sp-pet-none', role: 'img', 'aria-label': alt, html: use('star')});
 }
-function sparkles(n) { return h('span', {class: 'sp-chip', 'aria-label': P.sparks(n)}, h('span', {class: 'sp-chip-star', 'aria-hidden': 'true', html: use('star')}), h('span', {class: 'sp-chip-num', text: String(n)}), h('span', {class: 'sp-chip-word', text: ' ' + P.word(n)})); }
 function backPill(cls, label, onclick, aria) { return h('button', {type: 'button', class: 'sp-pill' + (cls ? ' ' + cls : ''), 'aria-label': aria || null, onclick: onclick}, h('span', {class: 'sp-pill-ic', 'aria-hidden': 'true', html: use('back')}), label); }
 function use(id, cls) { return '<svg class="' + (cls || 'sp-i') + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sp-i-' + id + '"/></svg>'; }
 function emblem(cls) { return h('span', {class: 'sp-emblem' + (cls ? ' ' + cls : ''), role: 'img', 'aria-label': 'SPARKADE', html: '<svg viewBox="0 0 560 170" aria-hidden="true" focusable="false"><use href="#sp-wordmark"/></svg>'}); }
 function firstName(name) { return String(name || '').trim().split(/\s+/)[0] || ''; }
 function teacher() { return S.snap && typeof S.snap.teacher === 'string' && S.snap.teacher ? S.snap.teacher : TEACHER; }
-function moodText(name, c) { var k = kind(c.species).name; return c.mood === 'missing' && name ? k + ' is missing ' + name + '.' : k + ' ' + P.CARE.line(c.mood) + '.'; }
 function screenNow() { return S.snap && S.snap.screen ? S.snap.screen : {sparkles: true, care: true, sound: true}; }
 
-var READS = {portalPointsStudentOpenClass: 'open-class', portalPointsStudentClass: 'class-read', portalPointsStudentSignIn: 'sign-in', portalPointsStudentBoard: 'class-read', portalPointsStudentCare: 'care', portalPointsStudentCourtyard: 'courtyard'};
+var READS = {portalPointsStudentOpenClass: 'open-class', portalPointsStudentBoard: 'class-read', portalPointsStudentCare: 'care', portalPointsStudentCourtyard: 'courtyard'};
 function run(name, payload, retry) {
 if (!READS[name]) return Promise.reject(new Error('Unavailable action'));
 var started = Date.now();
@@ -1741,7 +1776,7 @@ if (typeof runner[name] !== 'function') finish(new Error('missing')); else runne
 function record(status) { timings.push({category: READS[name], durationMs: Math.max(0, Date.now() - started), status: status}); if (timings.length > 60) timings.shift(); }
 return task.then(function (value) {
 record(value && value.ok ? 'ok' : 'refused');
-if (value && value.reason === 'busy' && name !== 'portalPointsStudentSignIn' && name !== 'portalPointsStudentOpenClass' && retry.attempt < 11) {
+if (value && value.reason === 'busy' && name !== 'portalPointsStudentOpenClass' && retry.attempt < 11) {
 if (!retry.live()) throw new Error('cancelled');
 var remaining = retry.deadline - Date.now();
 if (remaining <= 1) return value;
@@ -1759,10 +1794,10 @@ window.spDiagnostics = function () { return timings.map(function (entry) { retur
 function leaveYard() {
 S.yard++; clearTimeout(S.poll); clearTimeout(S.replay); S.poll = S.replay = 0;
 if (S.world) { try { S.world.destroy(); } catch (e) {} }
-S.world = S.host = S.layer = S.sheet = S.note = null; S.polling = false; bedSync();
+S.world = S.host = S.layer = S.note = null; S.polling = false; bedSync();
 }
 function screen() {
-stopPin(); leaveYard(); app.className = 'sp-app';
+stopRoom(); leaveYard(); app.className = 'sp-app';
 app.replaceChildren.apply(app, Array.prototype.filter.call(arguments, function (x) { return x != null; })); keepReveal(); window.scrollTo(0, 0);
 }
 function reveal(name) {
@@ -1787,12 +1822,10 @@ setTimeout(function () { el.remove(); }, FADE_MS);
 }
 function revealKeys(e) { if (e && (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape')) hideReveal(); }
 function keepReveal() { if (S.reveal) app.append(S.reveal); }
-function stopPin() {
-if (S.pinKeys) { document.removeEventListener('keydown', S.pinKeys); S.pinKeys = null; }
-if (S.careTimer) { clearTimeout(S.careTimer); S.careTimer = 0; }
-}
+function stopRoom() { if (S.careTimer) { clearTimeout(S.careTimer); S.careTimer = 0; } }
 var OFFLINE = 'SPARKADE could not be reached. Check the internet connection, then try again.';
 var RESTING = 'SPARKADE is busy right now. Try again in a few minutes.';
+var UPDATING = 'SPARKADE is being updated. Ask your teacher to publish the new version.';
 function problem(text, again, cls) {
 screen(top(), h('section', {class: 'sp-card sp-problem' + (cls ? ' ' + cls : ''), role: 'alert'}, h('p', {class: 'sp-big', text: 'One moment.'}), h('p', {class: 'sp-problem-text', text: text}),
 again ? h('button', {type: 'button', class: 'sp-btn', onclick: again}, 'Try again') : null));
@@ -1804,6 +1837,7 @@ h('p', {class: 'sp-problem-text', text: 'Ask your teacher to publish the new ver
 function top() { return h('header', {class: 'sp-top'}, emblem('sp-emblem-top')); }
 
 function start() {
+remember('spark-teacher', ''); // The A2 teacher-mode flag; the teacher layer now keeps a session per class instead.
 if (!KEY) {
 var last = recall(LAST);
 if (!goodKey(last)) { openClass(); return; }
@@ -1813,7 +1847,7 @@ courtyard();
 }
 function fromAddress() { return typeof SP_KEY === 'string' && SP_KEY !== '' && SP_KEY === KEY; }
 function openClass(note) {
-++S.request; S.busy = false; S.roster = null; S.board = null; S.snap = null;
+++S.request; S.busy = false; S.board = null; S.snap = null;
 var msg = h('p', {class: 'sp-pin-msg sp-open-msg', role: 'status', text: note || (S.teachAfter ? 'Open the class first: type the class code and password.' : '')});
 var code = h('input', {id: 'sp-code', class: 'sp-field', type: 'text', inputmode: 'text', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', maxlength: '16', placeholder: 'For example 5-4CT1', value: S.code,
 oninput: function (e) { S.code = String(e.target.value || ''); }});
@@ -1831,7 +1865,6 @@ if (request !== S.request) return;
 S.busy = false; button.disabled = false;
 if (r && r.ok && goodKey(r.key)) {
 useKey(String(r.key)); remember(LAST, KEY);
-S.roster = {ok: true, className: r.className, students: r.students};
 courtyard(); return;
 }
 password.value = '';
@@ -1845,21 +1878,24 @@ focus(reason === 'mismatch' || !reason ? password : code);
 };
 var onEnter = function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
 code.addEventListener('keydown', onEnter); password.addEventListener('keydown', onEnter);
-screen(h('section', {class: 'sp-open'},
+var plate = art('courtyard');
+screen(h('div', {class: 'sp-open-plate' + (plate ? '' : ' sp-open-noplate'), style: plate ? "background-image:url('" + plate + "')" : null, 'aria-hidden': 'true'}),
+h('section', {class: 'sp-open'},
 emblem('sp-open-mark'), h('h1', {class: 'sp-sr', text: 'Open your class'}),
 h('div', {class: 'sp-fields'},
 h('label', {class: 'sp-field-label', for: 'sp-code'}, h('span', {class: 'sp-field-name', text: 'Class code'}), code),
 h('label', {class: 'sp-field-label', for: 'sp-password'}, h('span', {class: 'sp-field-name', text: 'Class password'}), password)),
 msg, button,
-h('p', {class: 'sp-open-help', text: 'Your teacher gives the class the code and the password.'})), teachButton());
+h('p', {class: 'sp-open-help', text: 'Your teacher gives the class the code and the password.'}),
+h('button', {type: 'button', class: 'sp-link sp-open-teach', 'data-sp': 'teacher'}, 'I am the teacher')));
+app.className = 'sp-app sp-app-open';
 focus(S.code ? password : code);
 }
 function linkGone() {
 if (fromAddress()) { problem('This class link no longer works. Ask your teacher for the new link.'); return; }
-var m = saved(); delete m.session; delete m.studentId; save(m); remember(LAST, ''); useKey('');
+var m = saved(); delete m.studentId; save(m); remember(LAST, ''); useKey('');
 openClass('That class is not open any more. Type the class code and password again, or ask your teacher.');
 }
-function anotherClass() { remember(LAST, ''); useKey(''); openClass(); }
 
 var TONES = {
 award: [{f: 880, d: .28}, {f: 1318.5, d: .5, o: .09}], penalty: [{f: 330, d: .3, t: 'triangle', g: .09}, {f: 247, d: .55, t: 'triangle', o: .12, g: .08}],
@@ -1978,7 +2014,7 @@ return changed ? base : null;
 }
 function bannerShut(snap) { var b = snap.screen && snap.screen.banner, m = saved().banner; return !!(b && m && m.text === b.text && m.shut); }
 function showYard(snap) {
-stopPin(); leaveYard();
+stopRoom(); leaveYard();
 if (T && T.on) snap = T.through(snap);
 S.snap = snap; S.fails = 0; S.polledAt = Date.now();
 var yard = S.yard, base = baselineOf(snap);
@@ -1989,7 +2025,7 @@ rows(snap);
 reveal(snap.name || 'Your class'); revealName(snap.name);
 if (!W) { problem(OFFLINE, courtyard); return; }
 var view = {chrome: chrome(), label: (snap.name || 'Your class') + ' castle', bannerCollapsed: bannerShut(snap)};
-S.world = W.mount(S.host, {snapshot: base || snap, art: art, avatar: function (p) { return avatar(p); }, onPupil: card, onPet: card, sfx: sfx,
+S.world = W.mount(S.host, {snapshot: base || snap, art: art, avatar: function (p) { return avatar(p); }, figure: figure, onPupil: tapPupil, onPet: tapPupil, sfx: sfx,
 chrome: view.chrome, label: view.label, bannerCollapsed: view.bannerCollapsed, fps: fpsAsked(),
 onBanner: function (shut) { var m = saved(), b = S.snap && S.snap.screen && S.snap.screen.banner; m.banner = {text: b ? b.text : '', shut: !!shut}; save(m); }});
 if (base) S.replay = setTimeout(function () { replay(yard, 0); }, 600); else rememberSeen(snap);
@@ -1998,7 +2034,7 @@ bedSync();
 schedule(pollMs());
 if (T && T.on) T.attach();
 else if (S.teachAfter) { S.teachAfter = false; teach(false); }
-else if (recall(TEACH) === '1') teach(true);
+else if (recall(TEACH + KEY)) teach(true);
 }
 function replay(yard, waited) {
 S.replay = 0;
@@ -2064,7 +2100,8 @@ return S.teachLoad;
 }
 function teacherHost() {
 return {app: app, h: h, say: say, sfx: sfx, firstName: firstName, teacher: teacher, reduceMotion: reduceMotion, W: W,
-gateway: typeof window.SP_GATEWAY === 'string' ? window.SP_GATEWAY : '', clientId: typeof window.SP_GATEWAY_CLIENT === 'string' ? window.SP_GATEWAY_CLIENT : '',
+gateway: typeof window.SP_GATEWAY === 'string' ? window.SP_GATEWAY : '', key: function () { return KEY; }, store: TEACH,
+openRoom: function (id) { if (pupilOf(id)) openRoom(id, false); },
 snap: function () { return S.snap; }, setSnap: function (s) { S.snap = s; }, world: function () { return S.world; }, element: function () { return S.host; }, dismiss: dismiss,
 draw: function (view) { if (S.world && S.snap) S.world.update(S.snap, Object.assign({chrome: chrome(), quiet: true}, view || {})); },
 refresh: function () { if (S.world) poll(); },
@@ -2095,37 +2132,27 @@ if (S.world && S.snap) teach(false); else S.teachAfter = true;
 }
 
 function pupilOf(id) { return S.snap ? (S.snap.students || []).filter(function (p) { return p.studentId === id; })[0] || null : null; }
-function closeCard() {
-if (!S.sheet) return;
-var back = S.sheet; S.sheet = null; dismiss(back);
-document.removeEventListener('keydown', cardKeys);
-}
-function cardKeys(e) { if (e.key === 'Escape') { e.preventDefault(); closeCard(); } }
-function card(id) {
+function tapPupil(id) {
 if (T && T.on && T.pupil(id)) return;
-var p = pupilOf(id); if (!p || !S.host) return;
-closeCard(); sfx.play('tap');
-var show = screenNow().sparkles !== false, c = p.companion && W && W.SPECIES[p.companion.species] ? p.companion : null, recent = (p.recent || []).slice(0, 3);
-var close = h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick: closeCard}, 'Close');
-var pet = c ? h('div', {class: 'sp-sheet-pet'}, petPicture(c.species, c.stage, 'sp-sheet-petimg'),
-h('div', {class: 'sp-sheet-petcopy'}, h('strong', {text: kind(c.species).name + ' · ' + (c.stage ? c.stageName || kind(c.species).stages[c.stage - 1] : 'Egg')}),
-h('span', {text: c.stage ? moodText(p.name, c) : 'Waiting to hatch in class.'}))) : h('p', {class: 'sp-sheet-note sp-nopet', text: 'No companion yet. An egg comes with your teacher in class.'});
-var lines = recent.length ? h('ul', {class: 'sp-recent'}, recent.map(function (x) {
-return h('li', {text: String(x.label || '') + (show ? ' ' + P.signed(x.points) : '') + ' · ' + when(x.at)});
-})) : h('p', {class: 'sp-sheet-note', text: 'No Sparkles yet. The first one lands here.'});
-var sheet = h('section', {class: 'sp-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': p.name},
-h('div', {class: 'sp-grab', 'aria-hidden': 'true'}),
-h('div', {class: 'sp-sheet-head'}, h('h2', {class: 'sp-sheet-name', text: p.name}), show ? sparkles(p.points) : null),
-pet, lines, close);
-S.sheet = h('div', {class: 'sp-sheet-back', onclick: function (e) { if (e.target === S.sheet) closeCard(); }}, sheet);
-app.append(S.sheet);
-document.addEventListener('keydown', cardKeys);
-focus(close);
-say(p.name + (show ? ', ' + P.sparks(p.points) : '') + '.');
+if (!pupilOf(id) || !S.host) return;
+sfx.play('tap');
+openRoom(id, true);
 }
+function mine() {
+var id = saved().studentId;
+if (typeof id !== 'string' || !id) return '';
+if (S.snap && !pupilOf(id)) { forgetMe(); return ''; }
+return id;
+}
+function forgetMe() { var m = saved(); if (!('studentId' in m)) return; delete m.studentId; save(m); }
+function hint(text) {
+say(text); noteText(text);
+clearTimeout(S.hintTimer); S.hintTimer = setTimeout(function () { S.hintTimer = 0; if (S.note && S.note.textContent === text) noteText(''); }, 5000);
+}
+var TAP_ME = 'Tap yourself in the courtyard to open your room.';
 
 function layer(back, label) {
-closeCard(); stopPin();
+stopRoom();
 var body = h('div', {class: 'sp-layer-body'});
 var bar = h('header', {class: 'sp-top sp-layer-top'}, backPill('', label || 'Back to the courtyard', back || closeRoom), emblem('sp-layer-mark'));
 putLayer(h('div', {class: 'sp-layer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'My room'}, bar, body));
@@ -2138,105 +2165,59 @@ S.layer = el; if (S.host) S.host.setAttribute('aria-hidden', 'true');
 return el;
 }
 function closeRoom() {
-++S.request; S.busy = false; S.pin = ''; S.board = null; stopPin(); closeBook();
+++S.request; S.busy = false; S.board = null; stopRoom(); closeBook();
 if (S.layer) { dismiss(S.layer); S.layer = null; }
 if (S.host) { S.host.removeAttribute('aria-hidden'); focus(app.querySelector('.sp-qb-room')); }
 }
-function room() { if (saved().session) loadRoom(); else names(); }
-function names() {
-++S.request; S.busy = false; S.pin = '';
-if (!S.roster) {
-layer().append(h('p', {class: 'sp-wait', role: 'status', text: 'Opening the names…'}));
-var request = S.request;
-run('portalPointsStudentClass', {key: KEY}).then(function (r) {
-if (request !== S.request) return;
-if (r && r.ok) { S.roster = r; names(); return; }
-if (r && (r.reason === 'unavailable' || r.reason === 'busy')) { layerProblem(RESTING, names); return; }
-closeRoom(); linkGone();
-}).catch(function () { if (request === S.request) layerProblem(OFFLINE, names); });
-return;
-}
-var body = layer();
-body.append(h('section', {class: 'sp-pick'}, h('h1', {class: 'sp-title', text: 'Who are you?'}), h('p', {class: 'sp-lead', text: 'Tap your name, then type your PIN.'}),
-h('div', {class: 'sp-names'}, S.roster.students.map(function (s) {
-return h('button', {type: 'button', class: 'sp-name', onclick: function () { S.picked = s; S.pin = ''; pinPad(); }},
-h('span', {class: 'sp-name-art', html: avatar(s)}), h('span', {class: 'sp-name-text', text: s.name}));
-})),
-fromAddress() ? null : h('button', {type: 'button', class: 'sp-link sp-another', onclick: anotherClass}, 'Not your class? Open another class')));
-focus(body.querySelector('.sp-name'));
+function room() { var id = mine(); if (id) openRoom(id, false); else hint(TAP_ME); }
+function openRoom(id, keep) {
+if (!id) return;
+if (keep) { var m = saved(); if (m.studentId !== id) { m.studentId = id; save(m); } }
+loadRoom(id);
 }
 function layerProblem(text, again) {
 layer().append(h('section', {class: 'sp-card sp-problem', role: 'alert'}, h('p', {text: text}), again ? h('button', {type: 'button', class: 'sp-btn', onclick: again}, 'Try again') : null));
 }
-function pinPad(note) {
-var s = S.picked, dots = h('div', {class: 'sp-dots', 'aria-hidden': 'true'}), msg = h('p', {class: 'sp-pin-msg', role: 'status', text: note || ''});
-var draw = function () { dots.replaceChildren.apply(dots, [0, 1, 2, 3].map(function (i) { return h('span', {class: 'sp-dot' + (i < S.pin.length ? ' sp-dot-on' : '')}); })); entry.value = S.pin; };
-var press = function (d) { if (S.busy) return; if (d === 'back') S.pin = S.pin.slice(0, -1); else if (S.pin.length < 4) S.pin += d; draw(); if (S.pin.length === 4) signIn(msg); };
-var entry = h('input', {id: 'sp-pin', class: 'sp-sr', type: 'password', inputmode: 'numeric', autocomplete: 'off', maxlength: '4', 'aria-label': 'Your 4-digit PIN',
-oninput: function (e) { S.pin = String(e.target.value || '').replace(/\D/g, '').slice(0, 4); draw(); if (S.pin.length === 4) signIn(msg); }});
-var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'].map(function (k) {
-if (!k) return h('span', {class: 'sp-key-gap'});
-return k === 'back' ? h('button', {type: 'button', class: 'sp-key sp-key-back', 'aria-label': 'Delete', onclick: function () { press(k); }, html: use('back')}) : h('button', {type: 'button', class: 'sp-key', 'aria-label': k, onclick: function () { press(k); }}, k);
-});
-var body = layer(function () { ++S.request; S.busy = false; names(); }, 'Not ' + s.name + '?');
-body.append(h('section', {class: 'sp-pin'},
-h('span', {class: 'sp-pin-art', html: avatar(s)}),
-h('h1', {class: 'sp-title', text: 'Hi, ' + s.name + '!'}), h('p', {class: 'sp-lead', text: 'Type your PIN.'}),
-h('label', {class: 'sp-sr', for: 'sp-pin', text: 'Your 4-digit PIN'}), entry, dots, msg, h('div', {class: 'sp-keys'}, keys)));
-draw();
-S.pinKeys = pinKeys; document.addEventListener('keydown', pinKeys);
-function pinKeys(e) {
-if (!dots.isConnected) { document.removeEventListener('keydown', pinKeys); return; }
-if (e.target === entry) return;
-if (/^\d$/.test(e.key)) { e.preventDefault(); press(e.key); } else if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
-}
-}
-function signIn(msg) {
-if (S.busy) return;
-S.busy = true; msg.textContent = 'Checking…';
-var request = ++S.request;
-run('portalPointsStudentSignIn', {key: KEY, studentId: S.picked.studentId, pin: S.pin}).then(function (r) {
+function loadRoom(id) {
+S.busy = true;
+layer().append(h('p', {class: 'sp-wait', role: 'status', text: 'Opening the room…'}));
+var request = ++S.request, again = function () { loadRoom(id); };
+run('portalPointsStudentBoard', {key: KEY, studentId: id}).then(function (b) {
 if (request !== S.request) return;
 S.busy = false;
-if (r && r.ok) { var mine = saved(); mine.session = r.session; mine.studentId = r.studentId; save(mine); S.pin = ''; loadRoom(); return; }
-S.pin = '';
-var reason = r && r.reason;
-if (reason === 'paused') pinPad('Too many wrong tries. Wait 15 minutes, then try again. If you forgot your PIN, ask your teacher.');
-else if (reason === 'link') { closeRoom(); linkGone(); }
-else if (reason === 'gone') { S.roster = null; names(); }
-else if (reason === 'unavailable' || reason === 'busy') pinPad(RESTING);
-else pinPad('That PIN is not right. ' + (r && r.triesLeft ? plural(r.triesLeft, 'try', 'tries') + ' left.' : 'Try again.'));
-}).catch(function () { if (request !== S.request) return; S.busy = false; S.pin = ''; pinPad(OFFLINE); });
-}
-function loadRoom() {
-var session = saved().session;
-if (!session) { names(); return; }
-S.busy = true;
-layer().append(h('p', {class: 'sp-wait', role: 'status', text: 'Opening your room…'}));
-var request = ++S.request;
-run('portalPointsStudentBoard', {session: session}).then(function (b) {
-if (request !== S.request || saved().session !== session) return;
-S.busy = false;
-if (b && (b.reason === 'unavailable' || b.reason === 'busy')) { layerProblem(RESTING, loadRoom); return; }
-if (!b || !b.ok) { var m = saved(); delete m.session; delete m.studentId; save(m); S.board = null; names(); return; }
+if (b && (b.reason === 'unavailable' || b.reason === 'busy')) { layerProblem(RESTING, again); return; }
+if (b && b.reason === 'link') { closeRoom(); linkGone(); return; }
+if (b && b.reason === 'signin') { layerProblem(UPDATING); return; }
+if (!b || !b.ok || !b.me) { if (saved().studentId === id) forgetMe(); closeRoom(); hint('That room could not open. ' + TAP_ME); return; }
 S.board = b; drawRoom();
-}).catch(function () { if (request !== S.request) return; S.busy = false; layerProblem(OFFLINE, loadRoom); });
+}).catch(function (error) { if (request !== S.request) return; S.busy = false; layerProblem(error && error.message === 'missing' ? UPDATING : OFFLINE, again); });
 }
 function companionOf(me) { var c = me && me.companion; return c && W && W.SPECIES[c.species] ? c : null; }
 function hatched(c) { return !!(c && c.state === 'pet' && c.stage > 0); }
+function wideQuery() {
+if (S.wide === null) {
+try { S.wide = window.matchMedia('(min-width: 900px)'); } catch (e) { S.wide = false; }
+try { if (S.wide && typeof S.wide.addEventListener === 'function') S.wide.addEventListener('change', function () { if (S.board && S.layer && S.layer.querySelector('.sp-room')) drawRoom(); }); } catch (e) {}
+}
+return S.wide;
+}
+function wideRoom() { var q = wideQuery(); return !!(q && q.matches && art('room-wide')); }
 function drawRoom() {
-var me = S.board.me, c = companionOf(me), k = c ? kind(c.species) : null, careOn = screenNow().care !== false, plate = art('room');
+var me = S.board.me, c = companionOf(me), k = c ? kind(c.species) : null, careOn = screenNow().care !== false, wide = wideRoom(), plate = wide ? art('room-wide') : art('room');
+var mineHere = !(T && T.on) && saved().studentId === me.studentId;
 var petBox = c ? h('button', {type: 'button', class: 'sp-room-fig sp-room-pet', 'aria-label': hatched(c) ? 'Say hi to your ' + k.name : 'Look at your egg', onclick: function () { wobble(this); if (hatched(c) && careOn) care('pet'); }},
 h('span', {class: 'sp-contact', 'aria-hidden': 'true'}), petPicture(c.species, hatched(c) ? c.stage : 0, 'sp-room-petimg')) : null;
-var room = h('section', {class: 'sp-room' + (plate ? '' : ' sp-room-noplate')},
+var pill = h('button', {type: 'button', class: 'sp-pill sp-pill-gold sp-room-sparkles', 'aria-label': P.sparks(me.points) + '. Open My ' + WORD, onclick: openBook},
+h('span', {class: 'sp-pill-star', html: use('star')}), String(me.points), h('span', {class: 'sp-sr', text: ' ' + P.word(me.points)}));
+var figSrc = figure(me, c ? 'crouch' : 'stand'), meBox = h('span', {class: 'sp-room-me', html: figSrc ? null : avatar(me)});
+var room = h('section', {class: 'sp-room' + (wide ? ' sp-room-wide' : '') + (plate ? '' : ' sp-room-noplate') + (figSrc ? ' sp-room-figure' : '')},
 h('div', {class: 'sp-room-plate', style: plate ? "background-image:url('" + plate + "')" : null, 'aria-hidden': 'true'}),
 h('div', {class: 'sp-room-legible', 'aria-hidden': 'true'}),
 backPill('sp-room-back', 'Courtyard', closeRoom, 'Back to the courtyard'),
 emblem('sp-room-mark'),
 h('p', {class: 'sp-room-who', text: firstName(me.name) + '’s room'}),
-h('button', {type: 'button', class: 'sp-pill sp-pill-gold sp-room-sparkles', 'aria-label': P.sparks(me.points) + '. Open My ' + WORD, onclick: openBook},
-h('span', {class: 'sp-pill-star', html: use('star')}), String(me.points), h('span', {class: 'sp-sr', text: ' ' + P.word(me.points)})),
-h('div', {class: 'sp-room-fig sp-room-me-fig'}, h('span', {class: 'sp-contact', 'aria-hidden': 'true'}), h('span', {class: 'sp-room-me', html: avatar(me)})),
+wide ? null : pill,
+h('div', {class: 'sp-room-fig sp-room-me-fig'}, h('span', {class: 'sp-contact', 'aria-hidden': 'true'}), meBox),
 petBox,
 h('div', {class: 'sp-room-block'},
 h('div', {class: 'sp-pet-info'},
@@ -2247,8 +2228,10 @@ c && !hatched(c) ? h('p', {class: 'sp-pet-small', text: 'Your teacher will hatch
 hatched(c) ? moodLine(me) : null),
 hatched(c) ? growLine(me, c, k) : null,
 hatched(c) && careOn ? careRow(me) : null,
-h('p', {class: 'sp-room-foot'}, 'Care never changes ' + WORD + ' · ', h('button', {type: 'button', class: 'sp-link sp-notme', onclick: signOut}, 'Not me'))));
-putLayer(h('div', {class: 'sp-layer sp-room-layer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'My room'}, room));
+wide ? pill : null,
+h('p', {class: 'sp-room-foot'}, 'Care never changes ' + WORD, mineHere ? ' · ' : null, mineHere ? h('button', {type: 'button', class: 'sp-link sp-notme', onclick: notMe}, 'Not me') : null)));
+if (figSrc) meBox.append(h('img', {class: 'sp-room-figimg', src: figSrc, alt: '', draggable: 'false', onerror: function () { meBox.innerHTML = avatar(me); room.classList.remove('sp-room-figure'); }}));
+putLayer(h('div', {class: 'sp-layer sp-room-layer', role: 'dialog', 'aria-modal': 'true', 'aria-label': firstName(me.name) + '’s room'}, room));
 say(me.name + '’s room. ' + P.sparks(me.points) + '.' + (c ? ' ' + k.name + (hatched(c) ? ', ' + c.stageName + '.' : ' egg.') : ''));
 }
 function growLine(me, c, k) {
@@ -2296,7 +2279,7 @@ say('My ' + WORD + ': ' + P.sparks(me.points) + '.');
 function closeBook() { if (!S.book) return; dismiss(S.book); S.book = null; document.removeEventListener('keydown', bookKeys); }
 function bookKeys(e) { if (e.key === 'Escape') { e.preventDefault(); closeBook(); } }
 function wobble(el) { if (!el || reduceMotion()) return; el.classList.remove('sp-wobble'); void el.offsetWidth; el.classList.add('sp-wobble'); }
-function signOut() { ++S.request; S.busy = false; var m = saved(); delete m.session; delete m.studentId; save(m); S.board = null; names(); }
+function notMe() { forgetMe(); closeRoom(); hint(TAP_ME); }
 
 var CARE = P.CARE;
 var REACTIONS = {pet: ['heart', 'enjoyed a gentle pat.'], water: ['drop', 'had a refreshing drink.'], snack: ['fish', 'enjoyed the snack.'], walk: ['paw', 'took a little stroll with you.']};
@@ -2329,14 +2312,14 @@ if (!REACTIONS[action] || !hatched(c) || !inRoom('.sp-care-msg')) return;
 var me = S.board.me, k = kind(c.species), state = careOf(me), left = CARE.cooldown(state.last, action, Date.now(), state.cooldownSeconds);
 if (left > 0) { careNote(fullText(k, action, left), 4000); return; }
 reaction(action, k); sfx.play('care');
-var session = saved().session, request = S.request, who = me.studentId;
-if (!session) { careNote(k.name + ' will remember it next time, once you are signed in.', 4000); return; }
-run('portalPointsStudentCare', {session: session, action: action}).then(function (r) {
+var request = S.request, who = me.studentId;
+run('portalPointsStudentCare', {key: KEY, studentId: who, action: action}).then(function (r) {
 if (request !== S.request || !S.board || S.board.me.studentId !== who) return;
 if (r && r.ok) { applyCare(r); if (r.allToday) celebrate(k); }
 else if (r && r.reason === 'cooldown') { applyCare(r); careNote(fullText(k, action, Number(r.cooldown) || 0), 4000); }
 else if (r && r.reason === 'off') { if (S.snap && S.snap.screen) S.snap.screen.care = false; drawRoom(); say('Care at home is resting for now.'); }
 else if (r && (r.reason === 'busy' || r.reason === 'unavailable')) careNote(k.name + ' will remember it next time. SPARKADE is busy right now.', 4000);
+else if (r && r.reason === 'signin') careNote(k.name + ' will remember it once SPARKADE is updated. Ask your teacher to publish the new version.', 4000);
 }).catch(function () { if (request === S.request) careNote(k.name + ' will remember it next time you are connected.', 4000); });
 }
 function reaction(action, k) {

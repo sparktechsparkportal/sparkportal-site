@@ -9073,6 +9073,13 @@ var SparkadeAvatar = (function () {
     var parts = /^SA1-B(\d{2})-H(\d{2})-O(\d{2})$/.exec(text.trim());
     return parts ? parse({v: 1, body: 'body-' + parts[1], hair: 'hair-' + parts[2], outfit: 'outfit-' + parts[3]}) : null;
   }
+  // The repainted figure for a record (4 November 2026, pilot/sparkade-figure-art.cjs): "<body>-<hair>-<outfit>-<pose>",
+  // pose 'stand' or 'crouch'; none for an invalid record or hair-00 (no figure was painted without hair).
+  function figureName(input, pose) {
+    var value = parse(input);
+    if (!value || value.hair === 'hair-00' || (pose !== 'stand' && pose !== 'crouch')) return null;
+    return value.body + '-' + value.hair + '-' + value.outfit + '-' + pose;
+  }
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]; }); }
   function source(map, id) {
     if (!map || !has(map, id) || typeof map[id] !== 'string') return '';
@@ -9096,7 +9103,7 @@ var SparkadeAvatar = (function () {
     out.push('</svg>');
     return out.join('');
   }
-  return {CATALOG: CATALOG, parse: parse, record: record, fromLegacy: fromLegacy, resolve: resolve, code: code, fromCode: fromCode, svg: svg};
+  return {CATALOG: CATALOG, parse: parse, record: record, fromLegacy: fromLegacy, resolve: resolve, code: code, fromCode: fromCode, figureName: figureName, svg: svg};
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAvatar;
 
@@ -9287,7 +9294,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     function clsOut(c) {
       const t = P.totals(list(c.classId)), batches = {}, order = [];
       M.awards.filter(a => a.classId === c.classId).forEach(a => { let b = batches[a.batchId]; if (!b) { b = batches[a.batchId] = { batchId: a.batchId, at: a.at, label: a.label, icon: a.icon, points: a.points, studentIds: [], undone: a.undone }; order.push(a.batchId); } b.studentIds.push(a.studentId); });
-      return { classId: c.classId, code: c.code, name: c.name, linkKey: '', link: '', password: c.password || '', screen: screenOf(c), goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) },
+      return { classId: c.classId, code: c.code, name: c.name, linkKey: '', link: '', password: c.password || '', teacherPassword: c.teacherPassword || '', screen: screenOf(c), goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) },
         students: M.students.filter(s => s.classId === c.classId).sort((a, b) => a.order - b.order).map(s => ({ studentId: s.studentId, name: s.name, pin: s.pin, creature: s.creature, active: s.active, order: s.order, points: (t[s.studentId] || {}).points || 0, peak: (t[s.studentId] || {}).peak || 0, balance: (t[s.studentId] || {}).points || 0, look: s.look || A.startFor(s.studentId), avatarV2: s.avatarV2 || null, wear: s.wear || '', pet: s.pet || null, spent: 0, made: false, things: 0, companion: companionOut(s) })),
         recent: order.slice(-30).reverse().map(id => batches[id]), buys: [], quests: (M.quests || []).filter(q => q.classId === c.classId && q.active), claims: [] };
     }
@@ -9297,7 +9304,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     return {
       data(classId) { load(); const active = M.classes.filter(c => c.active); const c = classId ? cls(classId) : active[0]; return later({ ok: true, ready: true, url: '', classes: active.map(x => ({ classId: x.classId, code: x.code, name: x.name, students: M.students.filter(s => s.classId === x.classId && s.active).length })), shop: M.shop, behaviours: M.behaviours.slice().sort((a, b) => a.order - b.order), cls: c ? clsOut(c) : null }); },
       setup() { load(); return later({ ok: true, created: false, url: '' }); },
-      saveClass(p) { load(); const code = String(p.code || '').trim(); if (!/^[0-9A-Za-z][0-9A-Za-z -]{0,15}$/.test(code)) return Promise.reject(new Error('Type the class code, for example 5-4CT1.')); let c = p.classId ? cls(p.classId) : null; if (M.classes.some(x => x !== c && x.active && x.code.toLowerCase() === code.toLowerCase())) return Promise.reject(new Error(code + ' is already in Points.')); const password = p.password === undefined || p.password === null ? undefined : String(p.password).trim(); if (password !== undefined && password !== '' && !(password.length >= 6 && password.length <= 24)) return Promise.reject(new Error('The class password needs 6 to 24 characters.')); if (!c) { c = { classId: newId(), code, name: p.name || '', linkKey: '', password: password || '', goalName: p.goalName || 'Class party', goalTarget: Number(p.goalTarget) >= 5 ? Number(p.goalTarget) : 300, goalStart: new Date().toISOString(), active: true }; M.classes.push(c); } else { c.code = code; c.name = p.name || ''; if (password !== undefined) c.password = password; if (p.archive === true) c.active = false; } save(); return later({ ok: true, classId: c.classId }); },
+      saveClass(p) { load(); const code = String(p.code || '').trim(); if (!/^[0-9A-Za-z][0-9A-Za-z -]{0,15}$/.test(code)) return Promise.reject(new Error('Type the class code, for example 5-4CT1.')); let c = p.classId ? cls(p.classId) : null; if (M.classes.some(x => x !== c && x.active && x.code.toLowerCase() === code.toLowerCase())) return Promise.reject(new Error(code + ' is already in Points.')); const password = p.password === undefined || p.password === null ? undefined : String(p.password).trim(); if (password !== undefined && password !== '' && !(password.length >= 6 && password.length <= 24)) return Promise.reject(new Error('The class password needs 6 to 24 characters.')); const teacherPassword = p.teacherPassword === undefined || p.teacherPassword === null ? undefined : String(p.teacherPassword).trim(); if (teacherPassword !== undefined && teacherPassword !== '' && !(teacherPassword.length >= 6 && teacherPassword.length <= 24)) return Promise.reject(new Error('The teacher password needs 6 to 24 characters.')); const tk = teacherPassword !== undefined ? teacherPassword : c ? c.teacherPassword || '' : '', pk = password !== undefined ? password : c ? c.password || '' : ''; if (tk && pk && tk === pk) return Promise.reject(new Error('The teacher password must be different from the class password.')); if (!c) { c = { classId: newId(), code, name: p.name || '', linkKey: '', password: password || '', teacherPassword: teacherPassword || '', goalName: p.goalName || 'Class party', goalTarget: Number(p.goalTarget) >= 5 ? Number(p.goalTarget) : 300, goalStart: new Date().toISOString(), active: true }; M.classes.push(c); } else { c.code = code; c.name = p.name || ''; if (password !== undefined) c.password = password; if (teacherPassword !== undefined) c.teacherPassword = teacherPassword; if (p.archive === true) c.active = false; } save(); return later({ ok: true, classId: c.classId }); },
       newGoal(p) { load(); const c = cls(p.classId), t = Math.floor(Number(p.goalTarget)); if (!String(p.goalName || '').trim()) return Promise.reject(new Error('Name the prize, for example Movie day.')); if (!(t >= 5 && t <= 100000)) return Promise.reject(new Error('The class goal needs a number of points from 5 to 100000.')); c.goalName = String(p.goalName).trim().slice(0, 40); c.goalTarget = t; c.goalStart = new Date().toISOString(); save(); return later({ ok: true, goal: { name: c.goalName, target: t, start: c.goalStart, progress: 0 } }); },
       saveStudents(p) { load(); const c = cls(p.classId), mine = M.students.filter(s => s.classId === c.classId), taken = new Set(mine.map(s => s.pin)); let added = 0;
         const fresh = new Set();
@@ -9619,21 +9626,22 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
 
   /* Pupils (or the whole class link) paused after wrong PINs, and the class code paused after wrong passwords, with the way
    * to let them in again at once. The two pauses are separate: wrong passwords at the code never pause PIN sign-in. */
-  function paused(c) { const p = c && c.pauses ? c.pauses : {}; return { cls: !!p.cls, code: !!p.code, students: p.students || [] }; }
+  function paused(c) { const p = c && c.pauses ? c.pauses : {}; return { cls: !!p.cls, code: !!p.code, teacher: !!p.teacher, students: p.students || [] }; }
   function pauseNotice(c) {
     const p = paused(c), names = c.students.filter(s => p.students.indexOf(s.studentId) >= 0).map(s => s.name);
-    if (!p.cls && !p.code && !names.length) return null;
+    if (!p.cls && !p.code && !p.teacher && !names.length) return null;
     const parts = [];
     if (p.cls) parts.push('Signing in on the class link is paused for 15 minutes after too many wrong PINs.');
     else if (names.length) parts.push(names.join(', ') + (names.length === 1 ? ' is' : ' are') + ' paused for 15 minutes after wrong PINs.');
     if (p.code) parts.push('Opening the class with its code and password is paused for 15 minutes after too many wrong passwords.' + (p.cls || names.length ? '' : ' Pupils with the link still sign in.'));
+    if (p.teacher) parts.push('The teacher password for the courtyard is paused for 15 minutes after too many wrong tries.');
     const msg = h('span', { text: parts.join(' ') });
     const box = h('div', { class: 'pts-pause', role: 'status' }, msg);
     const lift = h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => {
       lift.disabled = true; msg.textContent = 'Letting them sign in again…';
-      Promise.resolve(call('clearPauses', { classId: c.classId })).then(() => { c.pauses = { cls: false, code: false, students: [] }; box.remove(); if (S.ui) S.ui.live.textContent = 'Pupils can sign in again.'; })
+      Promise.resolve(call('clearPauses', { classId: c.classId })).then(() => { c.pauses = { cls: false, code: false, teacher: false, students: [] }; box.remove(); if (S.ui) S.ui.live.textContent = 'Pupils can sign in again.'; })
         .catch(e => { lift.disabled = false; msg.textContent = String(e.message || e); });
-    } }, p.code && !p.cls && !names.length ? 'Open the class code now' : 'Let them sign in now');
+    } }, p.teacher && !p.code && !p.cls && !names.length ? 'Let the teacher sign in now' : p.code && !p.cls && !names.length ? 'Open the class code now' : 'Let them sign in now');
     box.append(lift);
     return box;
   }
@@ -10089,6 +10097,20 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
           msg.textContent = (value ? 'Class password saved. Pupils type ' + c.code + ' and this password at sparkportal.kr/sparkade.' : 'Class password taken away. Pupils can only open the class with the link now.') + (changed ? ' Anyone who already opened the class with the old password keeps it until you press Make a new link.' : ''); })
         .catch(e => { savePassword.disabled = false; msg.textContent = String(e.message || e); });
     } }, 'Save password');
+    // The teacher password (One SPARKADE): typed once on the TV and on the phone to give points from the courtyard, without Google.
+    const teacherBox = h('input', { id: 'pts-teacher-password', type: 'text', maxlength: '24', autocomplete: 'off', spellcheck: 'false', placeholder: '6 to 24 characters', value: c.teacherPassword || '' });
+    const shownTeacher = h('span', { class: 'pts-pin', title: 'Teacher password' }, c.teacherPassword ? 'Teacher password ' + c.teacherPassword : 'No teacher password yet');
+    const saveTeacher = h('button', { type: 'button', class: 'cp-secondary', onclick: () => {
+      const value = String(teacherBox.value || '').trim();
+      if (value && (value.length < 6 || value.length > 24)) { msg.textContent = 'The teacher password needs 6 to 24 characters.'; focusQuietly(teacherBox); return; }
+      if (value && value === (c.password || '')) { msg.textContent = 'The teacher password must be different from the class password.'; focusQuietly(teacherBox); return; }
+      saveTeacher.disabled = true; msg.textContent = value ? 'Saving the teacher password…' : 'Taking the teacher password away…';
+      Promise.resolve(call('saveClass', { classId: c.classId, code: c.code, name: c.name || '', teacherPassword: value }))
+        .then(() => { const had = !!c.teacherPassword; c.teacherPassword = value; teacherBox.value = value; shownTeacher.textContent = value ? 'Teacher password ' + value : 'No teacher password yet'; saveTeacher.disabled = false;
+          // A new or cleared teacher password ends every courtyard sign-in made with the old one.
+          msg.textContent = (value ? 'Teacher password saved. Type it once on the TV and on your phone, under Teacher.' : 'Teacher password taken away. Only your portal gives points now.') + (had ? ' Screens signed in with the old one need the new one.' : ''); })
+        .catch(e => { saveTeacher.disabled = false; msg.textContent = String(e.message || e); });
+    } }, 'Save');
     ui.body.append(
       h('div', { class: 'pts-bar-top' }, h('button', { type: 'button', class: 'cp-secondary', onclick: () => { S.view = 'board'; render(); } }, 'Back to the board'), h('h2', { class: 'pts-setup-title', text: 'Set up ' + (c.name || c.code) })),
       ...[pauseNotice(c)].filter(Boolean),
@@ -10102,6 +10124,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
           h('p', { class: 'pts-help', text: 'The password opens the same class link. Changing or taking away the password does not shut out anyone who already opened the class with it: press Make a new link for that.' }),
           h('div', { class: 'pts-inline' }, h('label', { class: 'cl-field', for: 'pts-class-code' }, h('span', { text: 'Class code' }), codeBox), h('label', { class: 'cl-field', for: 'pts-class-password' }, h('span', { text: 'Class password' }), passwordBox), savePassword),
           h('p', { class: 'pts-help' }, shownPassword)),
+        h('section', { class: 'pts-panel pts-teacherkey' }, h('h3', { text: 'Teacher password for the courtyard' }),
+          h('p', { class: 'pts-help', text: 'You type this once on the TV and on your phone to give points from the courtyard' }),
+          h('div', { class: 'pts-inline' }, h('label', { class: 'cl-field', for: 'pts-teacher-password' }, h('span', { text: 'Teacher password' }), teacherBox), saveTeacher),
+          h('p', { class: 'pts-help' }, shownTeacher)),
         h('section', { class: 'pts-panel' }, h('h3', { text: 'The class link' }),
           h('p', { class: 'pts-help', text: 'Pupils open this link at home, tap their name and type their PIN. They see classmates’ avatars and ' + P.CURRENCY.many + ' in name order, their companion, and their own history.' }),
           h('label', { class: 'cl-field', for: 'pts-link' }, h('span', { text: 'Link for ' + (c.name || c.code) }), linkBox), h('div', { class: 'cp-actions' }, copy, slips, renew)),

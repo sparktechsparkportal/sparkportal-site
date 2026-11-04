@@ -1,9 +1,10 @@
 var SparkadeTeacher = (function () {
 'use strict';
-var SESSION = 'cp-gateway-v1', NAME = 'spark-teacher-name', FLAG = 'spark-teacher', GIS_SRC = 'https://accounts.google.com/gsi/client';
+var STORE = 'spark-teacher-', SIGN_IN = 'portalPointsTeacherSignIn';
 var POLL_MS = 15000, UNDO_MS = 30000, HOLD_MS = 450, MAX_BANNER = 160;
 var MANAGE = 'https://sparkportal.kr/?live=1#teacher:cl-points';
-var NOT_OWNER = 'This Google account is not the teacher\'s';
+var UPDATING = 'SPARKADE is being updated. Ask your teacher to publish the new version.';
+var AGAIN = 'Your teacher sign-in has ended. Type the teacher password again.';
 var PATHS = {
 star: '<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/>',
 heart: '<path d="M12 21s-7.5-4.6-9.5-9.3C1 7.9 3.5 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.5 0 6 3.4 4.5 7.2C19.5 16.4 12 21 12 21z"/>',
@@ -40,113 +41,103 @@ return used.concat(rest).slice(0, 4);
 function start(host) {
 var w = window, doc = document;
 var T = {on: false, pollMs: POLL_MS, behaviours: [], focus: null, pending: {}, screenPending: null, undo: null, undoTimer: 0, sheet: null, suppress: null,
-holdTimer: 0, name: '', loading: null, gis: null, wired: null};
+holdTimer: 0, name: '', loading: null, wired: null, asking: null};
 
+function where() { return STORE + String(host.key() || ''); }
 function local(op, k, v) { try { if (op === 'get') return String(w.localStorage.getItem(k) || ''); if (v) w.localStorage.setItem(k, v); else w.localStorage.removeItem(k); } catch (e) {} return ''; }
-function tab(op, k, v) { try { if (op === 'get') return String(w.sessionStorage.getItem(k) || ''); if (v) w.sessionStorage.setItem(k, v); else w.sessionStorage.removeItem(k); } catch (e) {} return ''; }
-function session() {
+function kept() {
+if (!host.key()) return null;
 try {
-var s = JSON.parse(tab('get', SESSION) || 'null');
-if (s && typeof s.session === 'string' && s.session && s.owner === true && Date.parse(s.expires) > Date.now()) return s;
+var s = JSON.parse(local('get', where()) || 'null');
+if (s && typeof s.teacherSession === 'string' && s.teacherSession && Date.parse(s.expires) > Date.now()) return s;
 } catch (e) {}
+if (local('get', where())) forget();
 return null;
 }
 function keep(answer) {
-tab('set', SESSION, JSON.stringify({session: String(answer.session), email: String(answer.email || ''), owner: !!answer.owner, expires: String(answer.expires || '')}));
+local('set', where(), JSON.stringify({teacherSession: String(answer.teacherSession), teacher: String(answer.teacher || 'Teacher').slice(0, 80), expires: String(answer.expires || '')}));
 }
-function forget() { tab('set', SESSION, ''); tab('set', NAME, ''); }
+function forget() { local('set', where(), ''); }
 
 function fail(code, message) { var e = new Error(message || code); e.code = code; return e; }
-function post(name, payload, sessionId) {
+function post(name, payload) {
 return Promise.resolve().then(function () {
 return w.fetch(host.gateway, {method: 'POST', mode: 'cors', credentials: 'omit', redirect: 'follow', cache: 'no-store', headers: {'Content-Type': 'text/plain;charset=utf-8'},
-body: JSON.stringify({v: 1, name: name, payload: payload, session: sessionId || undefined})});
+body: JSON.stringify({v: 1, name: name, payload: payload})});
 }).then(function (response) { if (!response || response.ok === false) throw fail('connection'); return response.json(); }, function () { throw fail('connection'); }).then(function (answer) {
 if (answer && answer.ok === true) return answer.result;
-throw fail(String(answer && answer.code || 'error'), String(answer && answer.error || ''));
+if (answer && (answer.code === 'session' || /unknown function/i.test(String(answer.error || '')))) throw fail('missing');
+throw fail(String(answer && answer.code || 'error'));
 });
 }
-function call(name, payload) {
-if (host.gateway) {
-var s = session();
-if (!s) return Promise.reject(fail('session'));
-return post(name, payload, s.session).catch(function (e) { if (e && e.code === 'session') { forget(); stop(); } throw e; });
-}
+function send(name, payload) {
+if (host.gateway) return post(name, payload);
 return new Promise(function (resolve, reject) {
 var g = w.google && w.google.script && w.google.script.run;
 if (!g) { reject(fail('offline')); return; }
-var r = g.withSuccessHandler(resolve).withFailureHandler(function (e) { reject(fail('error', e && e.message)); });
+var r = g.withSuccessHandler(resolve).withFailureHandler(function () { reject(fail('error')); });
 if (typeof r[name] !== 'function') reject(fail('missing')); else r[name](payload);
 });
 }
-function ownerRefusal(e) { return !!(e && (e.code === 'owner' || /owner/i.test(String(e.message || '')))); }
-
-function gis() { return w.google && w.google.accounts && w.google.accounts.id ? w.google.accounts.id : null; }
-function loadGis() {
-if (gis()) return Promise.resolve(gis());
-if (T.gis) return T.gis;
-T.gis = new Promise(function (resolve, reject) {
-var tag = doc.createElement('script'); tag.src = GIS_SRC; tag.async = true;
-var timer = setTimeout(function () { reject(fail('gis')); }, 30000);
-tag.onload = function () { clearTimeout(timer); if (gis()) resolve(gis()); else reject(fail('gis')); };
-tag.onerror = function () { clearTimeout(timer); reject(fail('gis')); };
-(doc.head || doc.body).appendChild(tag);
-}).catch(function (e) { T.gis = null; throw e; });
-return T.gis;
-}
-function givenName(token) {
-try {
-var part = String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-var data = JSON.parse(decodeURIComponent(Array.prototype.map.call(w.atob(part), function (c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join('')));
-return String(data.given_name || '').trim();
-} catch (e) { return ''; }
-}
-function signIn(silent) {
-return new Promise(function (resolve) {
-var settled = false, msg = null, busy = false;
-function done(ok) { if (settled) return; settled = true; if (!silent) closeSheet(); resolve(ok); }
-if (!silent) {
-var holder = host.h('div', {class: 'sp-teach-google'});
-msg = host.h('p', {class: 'sp-pin-msg sp-teach-msg', role: 'status', text: ''});
-openSheet('Teacher sign-in', [host.h('h2', {class: 'sp-sheet-name', text: 'Sign in as the teacher'}),
-host.h('p', {class: 'sp-sheet-note', text: 'Use the school Google account that owns SPARKADE. Pupils never need this.'}), holder, msg,
-host.h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick: function () { done(false); }}, 'Cancel')], function () { done(false); });
-T.signHolder = holder;
-}
-loadGis().then(function (id) {
-id.initialize({client_id: host.clientId, callback: function (response) {
-if (busy || settled || !response || !response.credential) return;
-busy = true; if (msg) msg.textContent = 'Checking…';
-post('portalGatewaySignIn', {idToken: response.credential}).then(function (a) {
-busy = false;
-if (!a || a.ok !== true || typeof a.session !== 'string') throw fail('signin');
-if (!a.owner) {
-post('portalGatewaySignOut', {}, a.session).catch(function () {});
-notOwner(msg);
-if (silent) done(false); else { settled = true; resolve(false); }
-return;
-}
-keep(a); T.name = givenName(response.credential); tab('set', NAME, T.name);
-done(true);
-}).catch(function () { busy = false; if (msg) msg.textContent = 'The sign-in could not be checked. Check the connection, then try again.'; if (silent) done(false); });
-}, auto_select: true, cancel_on_tap_outside: false, itp_support: true, use_fedcm_for_prompt: true, context: 'signin', ux_mode: 'popup'});
-if (!silent && T.signHolder) try { id.renderButton(T.signHolder, {type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', width: 260}); } catch (e) {}
-try { id.prompt(); } catch (e) {}
-}).catch(function () { if (msg) msg.textContent = 'Google sign-in could not load. Check the connection, then try again.'; if (silent) done(false); });
+function call(name, payload) {
+var s = kept();
+if (!s) return Promise.reject(fail('session'));
+return send(name, Object.assign({}, payload, {teacherSession: s.teacherSession})).then(function (r) {
+if (r && r.ok === false && r.reason === 'session') { ended(); throw fail('session'); }
+return r;
 });
 }
-function notOwner(msg) {
-forget(); local('set', FLAG, '');
-if (msg) msg.textContent = NOT_OWNER + '.'; else note(NOT_OWNER + '.');
-host.say(NOT_OWNER + '.');
+function ended() {
+forget();
+var was = T.on;
+stop();
+if (was) ask(AGAIN).then(function (ok) { if (ok) begin(false); });
+}
+
+var REASONS = {unset: 'No teacher password yet. Set one in Set up class on your board.', mismatch: 'That is not the teacher password.',
+paused: 'Too many tries. Wait a few minutes.', unknown: 'This class is not open any more. Open the class again.'};
+function ask(note) {
+if (T.asking) return T.asking;
+T.asking = new Promise(function (resolve) {
+var settled = false, busy = false;
+function done(ok) { if (settled) return; settled = true; T.asking = null; T.sheetDone = null; closeSheet(); resolve(ok); }
+var msg = host.h('p', {class: 'sp-pin-msg sp-teach-msg', role: 'status', text: note || ''});
+var field = host.h('input', {id: 'sp-tpass', class: 'sp-field sp-tpass', type: 'password', autocomplete: 'current-password', maxlength: '24', spellcheck: 'false', autocapitalize: 'off', placeholder: 'Teacher password'});
+var enterBtn = host.h('button', {type: 'button', class: 'sp-btn sp-tenter', onclick: function () { submit(); }}, 'Enter');
+function submit() {
+if (busy || settled) return;
+var password = String(field.value || '');
+if (!password.trim()) { msg.textContent = 'Type the teacher password.'; return; }
+busy = true; enterBtn.disabled = true; msg.textContent = 'Checking…';
+send(SIGN_IN, {key: host.key(), password: password}).then(function (r) {
+busy = false; enterBtn.disabled = false; field.value = '';
+if (r && r.ok === true && typeof r.teacherSession === 'string' && r.teacherSession) {
+keep(r); T.name = host.firstName(r.teacher) || 'Teacher'; done(true); return;
+}
+msg.textContent = REASONS[r && r.reason] || 'That did not work. Try again.';
+}).catch(function (e) {
+busy = false; enterBtn.disabled = false; field.value = '';
+msg.textContent = e && e.code === 'missing' ? UPDATING : 'The password could not be checked. Check the connection, then try again.';
+});
+}
+field.addEventListener('keydown', function (e) { if (e && e.key === 'Enter') { if (e.preventDefault) e.preventDefault(); submit(); } });
+openSheet('Teacher sign-in', [host.h('h2', {class: 'sp-sheet-name', text: 'Teacher'}),
+host.h('label', {class: 'sp-field-label', for: 'sp-tpass'}, host.h('span', {class: 'sp-field-name', text: 'Teacher password'}), field),
+msg, enterBtn,
+host.h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick: function () { done(false); }}, 'Cancel')], function () { done(false); });
+T.sheetDone = function () { if (!settled) { settled = true; T.asking = null; resolve(false); } };
+try { field.focus({preventScroll: true}); } catch (e) {}
+});
+return T.asking;
 }
 
 function enter(opts) {
 var silent = !!(opts && opts.silent);
 if (T.on) return Promise.resolve(true);
 if (T.loading) return T.loading;
-var known = host.gateway ? session() : true;
-var who = known ? Promise.resolve(true) : signIn(silent);
+var s = kept();
+if (s && !T.name) T.name = host.firstName(s.teacher) || 'Teacher';
+var who = s ? Promise.resolve(true) : silent ? Promise.resolve(false) : ask('');
 T.loading = who.then(function (ok) { return ok ? begin(silent) : false; }).then(function (ok) { T.loading = null; return ok; }, function () { T.loading = null; return false; });
 return T.loading;
 }
@@ -164,15 +155,17 @@ return true;
 function begin(silent) {
 return behaviours(silent).then(function (ok) {
 if (!ok) return false;
-if (!T.name) T.name = tab('get', NAME) || host.firstName(host.teacher()) || 'Teacher';
-T.on = true; local('set', FLAG, '1');
+if (!T.name) T.name = host.firstName(host.teacher()) || 'Teacher';
+T.on = true;
 attach(); host.changed(); host.draw({selected: [], multi: false}); host.refresh();
 host.say('Teacher mode. Tap a pupil to give points.');
 return true;
 }).catch(function (e) {
-if (ownerRefusal(e)) { if (!silent) notOwner(null); else forget(); return false; }
-if (e && e.code === 'session' && host.gateway && !silent) return signIn(false).then(function (ok) { return ok ? begin(false) : false; });
-if (!silent) note('Teacher mode could not open. Check the connection, then try again.');
+if (e && e.code === 'session') {
+forget();
+return silent ? false : ask(AGAIN).then(function (ok) { return ok ? begin(false) : false; });
+}
+if (!silent) note(e && e.code === 'missing' ? UPDATING : 'Teacher mode could not open. Check the connection, then try again.');
 return false;
 });
 }
@@ -183,7 +176,7 @@ var el = host.element();
 if (el) { el.removeAttribute('data-sp-teach'); }
 host.changed(); host.draw({selected: [], multi: false});
 }
-function leave() { forget(); local('set', FLAG, ''); stop(); host.say('Pupil view.'); }
+function leave() { forget(); T.name = ''; stop(); host.say('Pupil view.'); }
 function attach() {
 var el = host.element();
 if (!el || !T.on) return;
@@ -226,7 +219,8 @@ if (f.narrow) { dx = Math.round(([0.14, 0.38, 0.62, 0.86][i] - 0.5) * f.w); dy =
 out += '<button type="button" class="sp-trb" data-sp="teach-give" data-b="' + esc(b.behaviourId) + '" style="--dx:' + dx + 'px;--dy:' + dy + 'px;--i:' + i + '" aria-label="' + esc(b.label) + ', ' + signed(b.points) + ' for ' + esc(f.who) + '">' +
 '<span class="sp-trb-disc">' + icon(iconFor(b.label)) + '<span class="sp-trb-badge">' + signed(b.points) + '</span></span><span class="sp-trb-label">' + esc(b.label) + '</span></button>';
 });
-var cap = f.mode === 'one' ? '' : '<span class="sp-tcap" style="left:' + f.cx + 'px;top:' + f.capY + 'px" role="status">' + esc(f.who) + '</span>';
+var cap = f.mode === 'one' ? '<button type="button" class="sp-tmore sp-troom" data-sp="teach-room" style="left:' + f.cx + 'px;top:' + f.capY + 'px">' + esc(host.firstName(f.who)) + '’s room</button>'
+: '<span class="sp-tcap" style="left:' + f.cx + 'px;top:' + f.capY + 'px" role="status">' + esc(f.who) + '</span>';
 return '<div class="sp-tring" style="left:' + f.rx + 'px;top:' + f.cy + 'px">' + out + '</div>' +
 '<button type="button" class="sp-tmore" data-sp="teach-more" style="left:' + f.cx + 'px;top:' + f.moreY + 'px">More reasons</button>' + cap;
 }
@@ -339,7 +333,7 @@ return true;
 }).catch(function (e) {
 delete T.pending[batchId];
 if (T.undo && T.undo.batchId === batchId) dropUndo(true);
-note(ownerRefusal(e) ? NOT_OWNER + '.' : 'Those points were not saved. Check the connection, then give them again.');
+note(e && e.code === 'missing' ? UPDATING : 'Those points were not saved. ' + (e && e.code === 'session' ? 'Sign in again, then give them again.' : 'Check the connection, then give them again.'));
 host.refresh();
 return false;
 });
@@ -399,7 +393,10 @@ var back = host.h('div', {class: 'sp-sheet-back sp-teach-back', onclick: functio
 T.sheet = back; host.app.append(back);
 return sheet;
 }
-function closeSheet() { if (T.sheet) { if (typeof host.dismiss === 'function') host.dismiss(T.sheet); else T.sheet.remove(); T.sheet = null; } T.signHolder = null; }
+function closeSheet() {
+if (T.sheet) { if (typeof host.dismiss === 'function') host.dismiss(T.sheet); else T.sheet.remove(); T.sheet = null; }
+var after = T.sheetDone; T.sheetDone = null; if (after) after();
+}
 function more() {
 var f = T.focus;
 if (!f) return;
@@ -438,7 +435,7 @@ var now = clone(host.snap()); now.screen = r.screen; host.setSnap(now);
 msg.textContent = 'Saved. Pupils see it within a minute.';
 host.refresh();
 return true;
-}).catch(function (e) { T.screenPending = null; msg.textContent = ownerRefusal(e) ? NOT_OWNER + '.' : 'Not saved. Check the connection, then try again.'; host.refresh(); return false; });
+}).catch(function (e) { T.screenPending = null; msg.textContent = e && e.code === 'missing' ? UPDATING : 'Not saved. Check the connection, then try again.'; host.refresh(); return false; });
 }
 function screenSheet() {
 leaveFocus();
@@ -498,6 +495,7 @@ else if (what === 'teach-undo') undo();
 else if (what === 'teach-manage') manage();
 else if (what === 'teach-screen') screenSheet();
 else if (what === 'teach-everyone') everyone();
+else if (what === 'teach-room') { var who = T.focus && T.focus.mode === 'one' ? T.focus.ids[0] : ''; leaveFocus(); if (who) host.openRoom(who); }
 else return false;
 return true;
 }
@@ -509,6 +507,6 @@ Object.defineProperty(api, 'on', {get: function () { return T.on; }});
 return api;
 }
 
-return {start: start, topReasons: topReasons, iconFor: iconFor, POLL_MS: POLL_MS, NOT_OWNER: NOT_OWNER, MANAGE: MANAGE};
+return {start: start, topReasons: topReasons, iconFor: iconFor, POLL_MS: POLL_MS, MANAGE: MANAGE, UPDATING: UPDATING};
 })();
 if (typeof window !== 'undefined' && window && typeof window === 'object') window.SparkadeTeacher = SparkadeTeacher;
