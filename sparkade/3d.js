@@ -720,7 +720,7 @@ w = w || PLATE.w; h = h || PLATE.h;
 var s = Math.max(box.width / w, box.height / h), dw = w * s, dh = h * s;
 return {left: box.left + (box.width - dw) * 0.5, top: box.top + (box.height - dh), width: dw, height: dh};
 }
-function fit(pts, low, heading, box, plate, grow, c) {
+function fit(pts, low, heading, box, plate, grow, c, size) {
 c = c || CAMERA;
 var cs = Math.cos(heading), sn = Math.sin(heading);
 function px(p, at, s) {
@@ -735,9 +735,17 @@ return b;
 var fx = box.left + box.width / 2, fy = box.top + box.height * FEET;
 var at = toFloor((fx - plate.left) / plate.width, (fy - plate.top) / plate.height, c);
 if (!at || !pts.length) return null;
+var s;
+if (size && size.s > 0) {
+s = size.s;
+var at0 = bounds(pts, at, s);
+if (!at0) return null;
+if (size.w > 0 && at0.r - at0.l > size.w) s *= size.w / (at0.r - at0.l);
+} else {
 var one = bounds(pts, at, 1);
 if (!one || one.r - one.l <= 0 || one.b - one.t <= 0) return null;
-var s = Math.min(FILL.w * box.width / (one.r - one.l), FILL.h * box.height / (one.b - one.t)) * (grow || 1);
+s = Math.min(FILL.w * box.width / (one.r - one.l), FILL.h * box.height / (one.b - one.t)) * (grow || 1);
+}
 for (var k = 0; k < 3; k++) {
 var all = bounds(pts, at, s), feet = bounds(low && low.length ? low : pts, at, s);
 if (!all || !feet) return null;
@@ -777,11 +785,42 @@ return w.room || null;
 var ROOM_CAM = {fov: 30, pos: [0, 2.4, 10], look: [0, 0.6, 0]};
 function roomCam(aspect) { return {fov: ROOM_CAM.fov, aspect: aspect > 0 ? aspect : 9 / 16, pos: ROOM_CAM.pos, look: ROOM_CAM.look}; }
 function restFor(mood, sky) { return mood === 'missing' || sky === 'night' ? 'sleep' : 'awake'; }
+function smokeOff(c) { if (c.smoke) c.smoke.forEach(function (sp) { sp.visible = false; sp.userData.life = 0; }); }
+function off(c) { var was = !!c.shown; c.shown = false; c.holder.visible = false; smokeOff(c); return was; }
+function restAll(creatures) { var changed = false; Object.keys(creatures || {}).forEach(function (id) { if (off(creatures[id])) changed = true; }); return changed; }
+function dropC(c) {
+if (c.holder.parent) c.holder.parent.remove(c.holder);
+if (c.smoke) { c.smoke.forEach(function (sp) { sp.material.dispose(); }); c.smoke = null; }
+c.model.dispose();
+}
+function eatStep(b, size) { var h = b.heading, r = 0.6 * (size || 1); return {type: 'eat', x: b.x + Math.sin(h) * r, z: b.z + Math.cos(h) * r}; }
+function careTypes(action) { return action === 'snack' || action === 'water' ? ['eat', 'cheer'] : action === 'walk' ? ['walk', 'cheer', 'walk'] : ['cheer']; }
+function eatChoice(o) {
+var b = o && o.brain, plan = b && Array.isArray(b.plan) ? b.plan : [];
+if (!b || o.still || o.mood !== 'great' || !(o.rise || o.pending) || b.state === 'sleep') return null;
+if (o.rise && o.tapEat) return null;
+if (b.state === 'eat' || plan.some(function (st) { return st && st.type === 'eat'; })) return null;
+if (plan.length || b.state === 'walk' || b.state === 'cheer' || b.state === 'wake' || o.tagLive) return 'queue';
+return 'now';
+}
+function roomDecision(o) {
+o = o || {};
+var covered = !!o.layer, want = covered && o.attr ? roomWant(o.attr, o.mood, o.search, o.base, o.failed, o.list) : null;
+var out = {covered: covered, want: want, care: false, eat: null}, b = want && o.brain;
+if (!b) return out;
+out.care = !!o.tagNew && !o.still;
+var types = out.care ? careTypes(o.action) : null;
+var view = types ? {state: types[0], plan: types.slice(1).map(function (t) { return {type: t}; })} : b;
+out.eat = eatChoice({rise: o.prevMood != null && o.prevMood !== 'great' && o.mood === 'great', pending: !!o.pending, mood: o.mood, brain: view,
+tagLive: !!o.tagLive || out.care, tapEat: out.care ? types[0] === 'eat' : !!o.tapEat, still: !!o.still});
+return out;
+}
 function hash(s) { var h = 2166136261; s = String(s); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 var pure = {VERSION: VERSION, SPECIES: SPECIES, CAM: CAM, PLATE: PLATE, FEET: FEET, FILL: FILL, LOAD_MS: LOAD_MS, MIN_FPS: MIN_FPS, SLOW_S: SLOW_S, STAGE_SCALE: STAGE_SCALE,
 THREE_URL: THREE_URL, param: param, modelUrl: modelUrl, wanted: wanted, camera: camera, toPlate: toPlate, toFloor: toFloor, plateRect: plateRect, fit: fit,
-FpsGuard: FpsGuard, colourMatrix: colourMatrix, restFor: restFor, roomWant: roomWant, ROOM_CAM: ROOM_CAM, roomCam: roomCam};
+FpsGuard: FpsGuard, colourMatrix: colourMatrix, restFor: restFor, roomWant: roomWant, ROOM_CAM: ROOM_CAM, roomCam: roomCam,
+smokeOff: smokeOff, off: off, restAll: restAll, dropC: dropC, eatStep: eatStep, careTypes: careTypes, eatChoice: eatChoice, roomDecision: roomDecision};
 if (!win) return pure;
 
 var doc = win.document, SELF = doc.currentScript && doc.currentScript.src || '';
@@ -972,11 +1011,6 @@ var c = L.creatures[id]; if (!c) return;
 delete L.creatures[id];
 dropC(c);
 }
-function dropC(c) {
-if (c.holder.parent) c.holder.parent.remove(c.holder);
-if (c.smoke) { c.smoke.forEach(function (sp) { sp.material.dispose(); }); c.smoke = null; }
-c.model.dispose();
-}
 function smokePool(group) {
 var out = [];
 for (var i = 0; i < 10; i++) {
@@ -985,8 +1019,6 @@ sp.visible = false; sp.userData = {life: 0, max: 1, v: new T.Vector3(), size: 0.
 }
 return out;
 }
-function smokeOff(c) { if (c.smoke) c.smoke.forEach(function (sp) { sp.visible = false; sp.userData.life = 0; }); }
-function off(c) { var was = !!c.shown; c.shown = false; c.holder.visible = false; smokeOff(c); return was; }
 
 function schedule() { if (L.dead || L.queued) return; L.queued = true; Promise.resolve().then(reconcile); }
 function reconcile() {
@@ -1005,14 +1037,14 @@ else asset(w.url).then(schedule, function () {});
 if (!c) return;
 if (c.colour !== w.colour) { c.colour = w.colour; paint(c); }
 if (c.stage !== w.stage) { if (w.stage > c.stage) c.grew = clock; c.stage = w.stage; c.brain.setStage(w.stage); }
-if (!L.first && c.mood !== 'great' && w.mood === 'great' && c.brain.state !== 'sleep') eat(c);
+eatNow(c, eatChoice({rise: !L.first && c.mood !== 'great' && w.mood === 'great', pending: c.eatAfter, mood: w.mood, brain: c.brain, still: still}));
 c.mood = w.mood; c.rest = restFor(w.mood, sky);
 });
 (snap.students || []).forEach(function (p) { L.seenStage[p.studentId] = p.companion ? p.companion.stage : null; });
 L.first = false;
 roomSync();
 hide();
-if (canvas && el && !L.roomEl && canvas.parentNode !== el) el.appendChild(canvas);
+if (canvas && el && !L.room && canvas.parentNode !== el) el.appendChild(canvas);
 if (renderer && !L.ready) { L.ready = true; loop(); }
 }
 var hidden = '';
@@ -1023,6 +1055,7 @@ var css = Object.keys(L.creatures).filter(function (id) { return L.creatures[id]
 if (L.room && L.room.shown) css.push('.sp-room-pet[data-sw-room]>img');
 css = css.join(',');
 css = css ? css + '{opacity:0!important}' : '';
+if (L.room && L.room.shown) css += '.sp-room-pet[data-sw-room]{z-index:0!important}.sp-room-layer .sp-room-me-fig,.sp-room-layer .sp-room-me-fig *{pointer-events:none!important}';
 if (css !== hidden) { hidden = css; style.textContent = css; }
 }
 
@@ -1035,11 +1068,8 @@ c.brain.go([{type: 'walk', x: dx / d * go, z: dz / d * go, stop: 0.05 * c.size}]
 c.back = true;
 }
 function cheer(c, walk) { if (still) return; if (walk) toPupil(c, [{type: 'cheer'}]); else c.brain.go([{type: 'cheer'}]); }
-function eat(c) {
-if (still) return;
-var h = c.brain.heading, r = 0.6 * (c.size || 1);
-c.brain.go([{type: 'eat', x: c.brain.x + Math.sin(h) * r, z: c.brain.z + Math.cos(h) * r}]);
-}
+function eat(c) { if (!still) c.brain.go([eatStep(c.brain, c.size)]); }
+function eatNow(c, choice) { if (choice === 'now') eat(c); c.eatAfter = choice === 'queue'; }
 function onMutations(list) {
 var cheered = {};
 list.forEach(function (m) {
@@ -1068,28 +1098,33 @@ var k = m && /(?:^|\s)sp-mood-(great|okay|missing)(?:\s|$)/.exec(m.className);
 return k ? k[1] : 'okay';
 }
 function roomSync() {
-var pet = doc.querySelector('.sp-layer.sp-room-layer .sp-room-pet[data-sw-room]'), mood = pet ? roomMood(pet) : '';
-var w = pet ? roomWant(pet.getAttribute('data-sw-room'), mood, search, base, L.failed, list) : null, c = L.room;
-L.roomEl = pet || null;
+var layer = doc.querySelector('.sp-layer:not(.sp-layer-out)');
+var pet = layer && layer.classList.contains('sp-room-layer') ? layer.querySelector('.sp-room-pet[data-sw-room]') : null;
+var c = L.room, mood = pet ? roomMood(pet) : '', tag = pet ? pet.querySelector('.sp-care-reaction') : null;
+var d = roomDecision({layer: !!layer, attr: pet ? pet.getAttribute('data-sw-room') : null, mood: mood, prevMood: c ? c.mood : null, search: search, base: base, failed: L.failed, list: list,
+brain: c && c.brain, tagNew: !!(c && tag && tag !== c.tag), tagLive: !!(c && c.tag && c.tag.isConnected), action: L.care, tapEat: c && c.tapEat, pending: c && c.eatAfter, still: still});
+L.covered = d.covered;
+L.roomEl = d.want ? pet : null;
+var w = d.want;
 if (c && (!w || w.url !== c.url)) { dropC(c); c = L.room = null; hide(); }
 if (!w) return null;
 if (!c) {
 var rec = L.assets[w.url];
 if (rec && rec.asset) { if (renderer) { c = L.room = create('room', w, rec.asset, true); c.mood = mood; } }
 else asset(w.url).then(schedule, function () {});
-if (!c) return null;
+return c;   // its moves start from the next look (a new model has no tap to answer and no mood rise yet)
 }
 if (c.colour !== w.colour) { c.colour = w.colour; paint(c); }
 if (c.stage !== w.stage) { if (w.stage > c.stage) c.grew = clock; c.stage = w.stage; c.brain.setStage(w.stage); }
-var tag = pet.querySelector('.sp-care-reaction');
-if (tag && tag !== c.tag) { c.tag = tag; c.tapAt = clock; careMove(c, L.care); }
-if (c.mood !== mood && mood === 'great' && !(clock - c.tapAt < 3) && c.brain.state !== 'sleep') eat(c);
+if (d.care) { c.tag = tag; c.tapAt = clock; careMove(c, L.care); }
+eatNow(c, d.eat);
 c.mood = mood; c.rest = restFor(mood, '');
 return c;
 }
 function careMove(c, action) {
+c.tapEat = careTypes(action)[0] === 'eat';
 if (still) return;
-if (action === 'snack' || action === 'water') { var h = c.brain.heading, r = 0.6 * (c.size || 1); c.brain.go([{type: 'eat', x: c.brain.x + Math.sin(h) * r, z: c.brain.z + Math.cos(h) * r}, {type: 'cheer'}]); }
+if (c.tapEat) c.brain.go([eatStep(c.brain, c.size), {type: 'cheer'}]);
 else if (action === 'walk') toPupil(c, [{type: 'cheer'}]);
 else cheer(c, false);
 }
@@ -1109,18 +1144,47 @@ var pet = L.roomEl, c = L.room, room = pet && pet.offsetParent, cs = canvas.styl
 if (!c || !room || !pet.isConnected) { if (c && off(c)) hide(); cs.visibility = 'hidden'; return; }
 if (canvas.parentNode !== room || canvas.previousSibling !== pet) room.insertBefore(canvas, pet.nextSibling);
 var R = rectOf(room), w = room.clientWidth, h = room.clientHeight, m = roomBoxes(pet, room, R);
-if (cs.position !== 'absolute') { cs.position = 'absolute'; cs.left = '0px'; cs.top = '0px'; }
+if (cs.position !== 'absolute') { cs.position = 'absolute'; cs.left = '0px'; cs.top = '0px'; cs.zIndex = '0'; }
 if (w < 2 || h < 2 || !m) { if (off(c)) hide(); cs.visibility = 'hidden'; return; }
 cs.visibility = '';
 if (canvas.__w !== w || canvas.__h !== h) { renderer.setSize(w, h, false); cs.width = w + 'px'; cs.height = h + 'px'; canvas.__w = w; canvas.__h = h; }
 var cc = camera(roomCam(w / h)), heading0 = -m.side * 0.65, a = c.asset.sw3d;
 var f = fit(a.pts, a.low, heading0, m.box, R, c.brain.grow.scale, cc);
-if (!f) { if (off(c)) hide(); renderer.render(scene3, roomCam3); return; }
+if (!f) { if (off(c)) hide(); renderer.render(scene3, roomCam3); L.frames++; return; }
+f = lyingFit(c, f, m.box, R, cc);
 if (!c.shown) { c.shown = true; hide(); }
 c.holder.visible = true;
 place(c, f, m, R, cc, heading0, dt);
 roomCam3.aspect = w / h; roomCam3.updateProjectionMatrix();
-renderer.render(scene3, roomCam3);
+renderer.render(scene3, roomCam3); L.frames++;
+}
+function lyingFit(c, f, box, R, cc) {
+var k = Math.min(1, Math.max(0, (c.brain.pose.curl - 0.02) / 0.6));
+if (!k || !c.lastS || !c.shown) return f;
+var p = livePose(c, c.lastS), g = p && fit(p.pts, p.low, 0, box, R, 1, cc, {s: f.s, w: FILL.w * box.width});
+if (!g) return f;
+k = k * k * (3 - 2 * k);
+return {x: f.x + (g.x - f.x) * k, z: f.z + (g.z - f.z) * k, s: f.s + (g.s - f.s) * k};
+}
+var LV;
+function livePose(c, s) {
+LV = LV || new T.Vector3();
+var all = [];
+c.holder.updateMatrixWorld(true);
+c.model.model.traverse(function (o) {
+if (!o.isMesh || !o.visible || !o.geometry.attributes.position) return;
+var n = o.geometry.attributes.position.count, step = Math.max(1, Math.floor(n / 400));
+for (var i = 0; i < n; i += step) {
+if (o.isSkinnedMesh) o.getVertexPosition(i, LV); else LV.fromBufferAttribute(o.geometry.attributes.position, i);
+o.localToWorld(LV); c.holder.worldToLocal(LV);
+all.push([LV.x / s, LV.y / s, LV.z / s]);
+}
+});
+if (all.length < 4) return null;
+var minY = Infinity, maxY = -Infinity;
+all.forEach(function (q) { minY = Math.min(minY, q[1]); maxY = Math.max(maxY, q[1]); });
+var cut = minY + 0.04 * (maxY - minY);
+return {pts: all, low: all.filter(function (q) { return q[1] <= cut; })};
 }
 function place(c, f, m, P, cc, heading0, dt) {
 if (!c.placed) { c.brain.heading = heading0; c.placed = true; }
@@ -1129,6 +1193,7 @@ var feet = m.feet && toFloor((m.feet.x - P.left) / P.width, (m.feet.y - P.top) /
 c.pupil = feet ? {x: feet.x - f.x, z: feet.z - f.z} : null;
 step(c, dt, heading0);
 c.holder.position.set(f.x, 0, f.z);
+c.lastS = f.s;
 var pop = c.born < 0 ? 1 : Math.min(1, (clock - c.born) / 0.6), ease = pop >= 1 ? 1 : 1 - Math.pow(1 - pop, 3) * Math.cos(pop * 4);
 c.holder.scale.setScalar(Math.max(0.001, ease));
 c.model.height = f.s / M.stageFactor(c.brain.grow.scale, STAGE_SCALE);
@@ -1164,28 +1229,27 @@ var V1, V2;
 function frame(dt) {
 var el = world.element;
 if (!el || !renderer) return;
-clock += dt; L.frames++;
+clock += dt;
 if (!V1) { V1 = new T.Vector3(); V2 = new T.Vector3(); }
 roomSync();
-var changed = false, ids = Object.keys(L.creatures), i;
-if (L.roomEl) {
-for (i = 0; i < ids.length; i++) if (off(L.creatures[ids[i]])) changed = true;
-if (changed) hide();
-roomFrame(dt);
+var changed = false, ids = Object.keys(L.creatures), i, cs = canvas.style;
+if (L.covered) {
+if (restAll(L.creatures)) hide();
+if (L.room) roomFrame(dt);
+else { if (canvas.parentNode !== el) el.appendChild(canvas); cs.visibility = 'hidden'; }
 if (debug) win.__sw3d = api.state();
 return;
 }
-var cs = canvas.style;
 if (canvas.parentNode !== el) el.appendChild(canvas);
-if (cs.position !== 'fixed') cs.position = 'fixed';
+if (cs.position !== 'fixed') { cs.position = 'fixed'; cs.zIndex = '2'; }
 var vw = win.innerWidth, vh = win.innerHeight, sr = el.getBoundingClientRect();
 var C = {left: Math.max(0, sr.left), top: Math.max(0, sr.top)};
 C.width = Math.max(0, Math.min(vw, sr.right) - C.left); C.height = Math.max(0, Math.min(vh, sr.bottom) - C.top);
 var backdrop = el.querySelector('.world-backdrop'), loading = el.classList.contains('world-loading');
 if (!backdrop || loading || C.width < 2 || C.height < 2) {
 cs.visibility = 'hidden';
-for (i = 0; i < ids.length; i++) if (off(L.creatures[ids[i]])) changed = true;
-if (changed) hide();
+if (restAll(L.creatures)) hide();
+if (debug) win.__sw3d = api.state();
 return;
 }
 cs.visibility = '';
@@ -1208,10 +1272,11 @@ if (!f) { if (off(c)) changed = true; continue; }
 if (!c.shown) { c.shown = true; changed = true; }
 c.holder.visible = true;
 if (hatching && c.born >= 0) c.born = clock;   // a new hatchling waits under the world's hatch overlay, then pops out
+if (c.eatAfter) eatNow(c, eatChoice({pending: true, mood: c.mood, brain: c.brain, still: still}));
 place(c, f, m, P, CAMERA, heading0, dt);
 }
 if (changed) hide();
-renderer.render(scene3, cam);
+renderer.render(scene3, cam); L.frames++;
 if (debug) win.__sw3d = api.state();
 }
 function step(c, dt, heading0) {
@@ -1259,9 +1324,10 @@ var api = {
 destroy: function () { kill('destroyed'); },
 state: function () {
 var out = {version: VERSION, dead: L.dead, reason: L.reason, ready: L.ready, frames: L.frames, fps: L.fps, still: still, guard: guardOn, errors: L.errors.slice(), three: !!win.THREE, creatures: {}};
-var info = function (c) { return {species: c.species, url: c.url, stage: c.stage, colour: c.colour, shown: !!c.shown, state: c.brain.state, scale: Math.round(c.brain.grow.scale * 1000) / 1000, puffs: c.puffs || 0, livePuffs: c.smoke ? c.smoke.filter(function (sp) { return sp.visible || sp.userData.life > 0; }).length : 0, rest: c.rest, mood: c.mood}; };
+var info = function (c) { return {species: c.species, url: c.url, stage: c.stage, colour: c.colour, shown: !!c.shown, state: c.brain.state, scale: Math.round(c.brain.grow.scale * 1000) / 1000, puffs: c.puffs || 0, livePuffs: c.smoke ? c.smoke.filter(function (sp) { return sp.visible || sp.userData.life > 0; }).length : 0, rest: c.rest, mood: c.mood,
+plan: c.brain.plan.map(function (st) { return st.type; }), eatAfter: !!c.eatAfter, fromHome: Math.round(Math.hypot(c.brain.x, c.brain.z) / (c.size || 1) * 1000) / 1000, curl: Math.round(c.brain.pose.curl * 100) / 100}; };
 Object.keys(L.creatures).forEach(function (id) { out.creatures[id] = info(L.creatures[id]); });
-out.models = list.slice(); out.room = L.room ? info(L.room) : null; out.roomOpen = !!L.roomEl;
+out.models = list.slice(); out.room = L.room ? info(L.room) : null; out.roomOpen = !!L.roomEl; out.covered = !!L.covered;
 out.sprites = scene3 ? scene3.children.filter(function (o) { return o.isSprite; }).length : 0;
 return out;
 }
