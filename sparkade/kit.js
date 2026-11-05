@@ -188,6 +188,27 @@ if (S.root) Array.prototype.slice.call(S.root.querySelectorAll('.sw-kits')).forE
 S.obs = null; S.world = null; S.root = null; S.last = null;
 }
 function given(studentId, itemId) { S.given[String(studentId) + ' ' + String(itemId)] = now(); }
+function pop(world, studentId, itemId, sound) {
+var root = (S.world === world && S.root) || (world && world.element), el = null, n = 0;
+studentId = String(studentId); itemId = String(itemId);
+if (!root || typeof root.querySelectorAll !== 'function') return 0;
+Array.prototype.forEach.call(root.querySelectorAll('.student'), function (e) { if (e.getAttribute('data-id') === studentId) el = e; });
+if (!el) return 0;
+var find = function () { return Array.prototype.filter.call(el.querySelectorAll('.sw-kit'), function (i) { return i.getAttribute('data-kit') === itemId; }); };
+var ids = (el.getAttribute('data-sw-dress') || '').split(/\s+/), img = el.querySelector('.sw-figure-img'), pose = img && img.getAttribute('data-pose');
+if (!find().length && ids.indexOf(itemId) >= 0 && img && (pose === 'stand' || pose === 'crouch')) {
+var snap = null; try { snap = world.snapshot(); } catch (e) {}
+var pupil = ((snap && snap.students) || []).filter(function (p) { return p.studentId === studentId; })[0];
+dress(img.parentNode, img, ids, pose, pupil, [], false);
+el.setAttribute('data-sw-kit', ids.join(' ') + '|' + img.getAttribute('src'));
+}
+find().forEach(function (i) { i.classList.remove('sw-kit-new'); void i.offsetWidth; i.classList.add('sw-kit-new'); n++; });
+given(studentId, itemId);
+var sfx = S.sfx || sound;
+if (n && sfx && sfx.enabled !== false && typeof sfx.play === 'function') { try { sfx.play('reveal'); } catch (e) {} }
+return n;
+}
+function art(itemId) { var id = String(itemId || ''); return hidden(id) ? '' : url(id + '-stand') || url(id + '-room-wide') || url(id); }
 
 function cover(plate, name) {
 var size = PLATES[name], W = plate.clientWidth || plate.offsetWidth || 0, H = plate.clientHeight || plate.offsetHeight || 0;
@@ -317,7 +338,7 @@ return Math.round(top - r.top - 8 - height);
 }
 
 function tryOn(box, img, ids, pose, pupil) { dress(box, img, ids, pose, pupil, [], true); }
-var api = {version: 1, attach: attach, detach: detach, given: given, room: room, tryOn: tryOn, place: place, wearable: wearable, apply: apply};
+var api = {version: 1, attach: attach, detach: detach, given: given, pop: pop, art: art, room: room, tryOn: tryOn, place: place, wearable: wearable, apply: apply};
 return api;
 })();
 if (typeof window !== 'undefined' && window && typeof window === 'object') window.SparkadeKit = SparkadeKit;

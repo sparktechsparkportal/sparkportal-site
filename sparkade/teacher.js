@@ -1,7 +1,7 @@
 var SparkadeTeacher = (function () {
 'use strict';
 var STORE = 'spark-teacher-', SIGN_IN = 'portalPointsTeacherSignIn';
-var POLL_MS = 15000, UNDO_MS = 30000, HOLD_MS = 450, MAX_BANNER = 160;
+var POLL_MS = 15000, UNDO_MS = 30000, GIFT_HOLD_MS = 2000, HOLD_MS = 450, MAX_BANNER = 160;
 var MANAGE = 'https://sparkportal.kr/?live=1#teacher:cl-points';
 var UPDATING = 'SPARKADE is being updated. Ask your teacher to publish the new version.';
 var AGAIN = 'Your teacher sign-in has ended. Type the teacher password again.';
@@ -403,8 +403,8 @@ var g = T.grants[k] || T.ungrants[k], on = !!T.grants[k], wn = T.worn[g.studentI
 if (!g.slot || (on && wn && wn.at[g.slot] > g.seq)) return;
 (out && out.students || []).forEach(function (s) {
 if (s.studentId !== g.studentId) return;
-var d = (Array.isArray(s.dress) ? s.dress : []).filter(function (id) { return on ? itemOf(id).slot !== g.slot : id !== g.itemId; });
-if (on) d.push(g.itemId);
+var d = (Array.isArray(s.dress) ? s.dress : []).filter(function (id) { return on && !g.hold ? itemOf(id).slot !== g.slot : id !== g.itemId; });
+if (on && !g.hold) d.push(g.itemId);
 d.sort(function (a, b) { return WEAR.indexOf(itemOf(a).slot) - WEAR.indexOf(itemOf(b).slot); });
 if (d.length) s.dress = d; else delete s.dress;
 });
@@ -540,12 +540,19 @@ if (w.SparkadeRoyal) return Promise.resolve(w.SparkadeRoyal);
 var L = w.SP_LAYERS && w.SP_LAYERS.royal;
 if (!L || typeof L.js !== 'string') return Promise.reject(fail('royal'));
 if (!T.royalLoad) {
-T.royalLoad = Promise.resolve().then(function () {
-return typeof host.lazy === 'function' ? host.lazy(L.js, L.css) : host.W && typeof host.W.lazy === 'function' ? host.W.lazy(L.js, L.css) : tag(L.js, L.css);
-}).then(function () { if (!w.SparkadeRoyal) throw fail('royal'); return w.SparkadeRoyal; });
+T.royalLoad = load(L).then(function () { if (!w.SparkadeRoyal) throw fail('royal'); return w.SparkadeRoyal; });
 T.royalLoad.catch(function () { T.royalLoad = null; });
 }
 return T.royalLoad;
+}
+function load(L) {
+return Promise.resolve().then(function () {
+return typeof host.lazy === 'function' ? host.lazy(L.js, L.css) : host.W && typeof host.W.lazy === 'function' ? host.W.lazy(L.js, L.css) : tag(L.js, L.css);
+});
+}
+function kitLayer() {
+var L = w.SP_LAYERS && w.SP_LAYERS.kit;
+if (!w.SparkadeKit && L && typeof L.js === 'string') load(L).then(function () { drawGifts(); }, function () {});
 }
 function crown() { if (T.on && w.SP_LAYERS) royal().then(function (r) { var world = host.world(); if (T.on && world) r.king(world, {sfx: host.sfx}); }, function () {}); }
 function uncrown() { try { if (w.SparkadeRoyal) w.SparkadeRoyal.unking(); } catch (e) {} }
@@ -570,7 +577,7 @@ leaveFocus();
 var list = host.h('div', {class: 'sp-tgifts'}), msg = host.h('p', {class: 'sp-sheet-note sp-tgift-note', role: 'status', text: ''});
 openSheet('Ready to give', [host.h('h2', {class: 'sp-sheet-name', text: 'Ready to give'}), msg, list, host.h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick: closeSheet}, 'Close')]);
 T.gifts = {list: list, msg: msg};
-drawGifts(); refreshWishes();
+drawGifts(); refreshWishes(); kitLayer();
 }
 function drawGifts() {
 var g = T.gifts;
@@ -601,10 +608,18 @@ var it = itemOf(itemId), who = host.firstName(nameOf(studentId)) || 'This pupil'
 var grantId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10), g = {studentId: studentId, itemId: itemId, slot: it.kind === 'wear' ? it.slot : '', seq: ++T.seq};
 var before = dressOf(snap, studentId).filter(function (id) { return itemOf(id).slot === g.slot; });
 T.grants[grantId] = g;
-var r = royalOn();
-if (r) try { r.gift(host.world(), studentId, itemId, it.kind); } catch (e) {}
+var r = royalOn(), shown = false, waiting = [], whenShown = function (fn) { if (shown) fn(); else waiting.push(fn); };
+var reveal = function () {
+if (shown) return;
+shown = true; g.hold = false;
+try { if (g.slot && T.grants[grantId]) { host.setSnap(through(host.snap(), true)); host.draw({}); } } catch (e) {}
+waiting.splice(0).forEach(function (fn) { fn(); });
+};
+g.hold = true;
+var started = false;
+if (r) try { started = r.gift(host.world(), studentId, itemId, it.kind, reveal) !== false; } catch (e) {}
 try { if (w.SparkadeKit && typeof w.SparkadeKit.given === 'function') w.SparkadeKit.given(studentId, itemId); } catch (e) {}
-if (g.slot) { host.setSnap(through(host.snap(), true)); host.draw({}); }
+if (started) setTimeout(reveal, GIFT_HOLD_MS); else reveal();
 var slotOf = function (d) { return d.filter(function (id) { return itemOf(id).slot === g.slot; }); };
 var setDress = function (d, whole) {
 var out = clone(host.snap());
@@ -616,18 +631,18 @@ if (d.length) s.dress = d; else delete s.dress;
 });
 host.setSnap(dressUp(out)); host.draw({});
 };
-var back = function (text, reason) {
+var answer = null, back = function (text, reason) {
 try {
 delete T.grants[grantId];
 var wn = T.worn[studentId];
 if (g.slot) setDress(wn && wn.dress ? slotOf(wn.dress) : reason === 'owned' ? before : before.filter(function (id) { return id !== itemId; }));
 note(text); drawGifts(); host.refresh();
 } catch (e) {}
-return {ok: false, reason: reason};
+return Object.assign({}, answer, {ok: false, reason: reason});
 };
 return new Promise(function (resolve) { resolve(call('portalPointsGrant', {classId: classId, studentId: studentId, itemId: itemId, grantId: grantId})); }).then(function (res) {
 if (res && res.ok === true) {
-try {
+whenShown(function () { try {
 delete T.grants[grantId];
 if (g.slot && Array.isArray(res.dress)) {
 var wn = T.worn[studentId] = T.worn[studentId] || {at: {}};
@@ -638,9 +653,10 @@ dropUndo();
 T.undo = {batchId: grantId, ids: [studentId], points: 0, who: who, classId: classId, grant: g, label: 'Gave ' + who + ' the ' + it.name};
 T.undoTimer = setTimeout(function () { dropUndo(true); }, UNDO_MS);
 host.say(T.undo.label + '.'); host.draw({}); drawGifts(); host.refresh(); refreshWishes();
-} catch (e) {}
+} catch (e) {} });
 return res;
 }
+if (res && typeof res === 'object') answer = res;
 var why = res && res.reason, wish = (T.wishes || []).filter(function (x) { return x.studentId === studentId && x.itemId === itemId; })[0];
 var left = res && isFinite(res.price) && isFinite(res.balance) ? Math.max(0, res.price - res.balance) : wish ? wish.left : 0;
 if (why === 'sparkles') return back(who + ' is saving up: ' + left + ' more ✦', why);

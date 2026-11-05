@@ -249,7 +249,8 @@ var refused = function (r) {
 busy[it.id] = false;
 if (closed) return;
 var why = r && r.reason;
-if (r && isFinite(Number(r.balance))) balance = Number(r.balance);
+if (r && r.balance != null && isFinite(Number(r.balance))) balance = Number(r.balance);
+if (r && r.price != null && Number(r.price) > 0) prices[it.id] = Math.round(Number(r.price));
 if (why === 'owned' && !owned(it.id)) mk.owned.push(it.id);
 draw();
 say(why === 'sparkles' ? SAY.saving(M.progress(balance, prices[it.id] || 0).left) : why === 'owned' ? SAY.owned : why === 'off' ? SAY.off : SAY.updating);
