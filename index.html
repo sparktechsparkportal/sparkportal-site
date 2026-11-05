@@ -1809,6 +1809,24 @@ details.cl-card[open]>summary::before{transform:rotate(45deg)}
 .pts-screen-row .pts-check{white-space:normal;font-size:15px;font-weight:650}
 .pts-screen-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:520px){.pts-screen-pair{grid-template-columns:1fr}.pts-screen-bannerhead{flex-wrap:wrap}}
+/* Every stage visible and companion colours (4 November 2026 evening, NEXT-LOOK-PLAN.md section 7): the growth row
+   (PointsCore.SPARKADE.growthHTML) in the egg dialog and the Pupil screen dialog; the colour the pupil will get in words. */
+.pts-egg-preview{display:flex;flex-direction:column;gap:8px;min-height:2.4em;flex-shrink:0}
+.pts-growth{flex-shrink:0}
+.pts-egg-colour{margin:0;font-size:14px;line-height:1.45;color:var(--sp-ink,#173640)}
+.pts-growth .sk-steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.pts-growth .sk-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.pts-growth .sk-pic{position:relative;display:block;width:100%;max-width:96px;aspect-ratio:1;border-radius:14px;background:var(--sp-panel-alt,#eef4f2)}
+.pts-growth .sk-pic img{position:absolute;inset:4%;width:92%;height:92%;object-fit:contain}
+.pts-growth .sk-name{max-width:100%;font-size:12px;font-weight:800;line-height:1.2;text-align:center;color:var(--sp-ink,#173640)}
+.pts-growth .sk-ahead{opacity:.45}
+.pts-growth .sk-now .sk-pic{box-shadow:0 0 0 2px #2e9c86}
+.pts-growth .sk-tonight .sk-pic{box-shadow:0 0 0 2px #cb9730}
+.pts-growth .sk-cap{margin:6px 0 0;font-size:13px;font-weight:700;color:var(--sp-muted,#53686d)}
+.pts-growth .sk-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0}
+.pts-screen-growth select{max-width:100%}
+.pts-screen-growthrow{margin-top:4px}
+@media(max-width:560px){.pts-growth .sk-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 </style>
 <style id="cpg-styles">
@@ -8305,16 +8323,93 @@ var PointsCore = (function () {
       return {stage: stage, balance: balance, grewLastNight: lastGrowth === lastNight, growsTonight: tonightStage > stage,
         tonightStage: tonightStage, nextMark: stage >= MARKS.length ? null : MARKS[stage]};
     }
-    /* The text kept in the Students tab, and reading it back (null for anything that is not a companion). */
-    function record(c) { return JSON.stringify({ species: String(c.species), state: c.state === 'pet' ? 'pet' : 'egg', eggAt: iso(c.eggAt), hatchedAt: c.state === 'pet' ? iso(c.hatchedAt) : '' }); }
+    /* Companion colours (owner decision, 4 November 2026 evening; NEXT-LOOK-PLAN.md section 7): when several pupils of a
+     * class have the same species, each gets its own colour. Eight variants of the painted art, applied as a CSS filter to
+     * the companion picture (never to its contact shadow): hue is degrees of hue-rotate, sat a saturation multiplier, tint
+     * the colour the 3D model's material takes later. Variant 0 is the art as drawn. The seven others were chosen on a
+     * contact sheet of the five stage-3 pictures (docs/design/sparkade/next-look-2026-11-01/evidence/colours/): every
+     * rotation that turns the gold accents green or olive (about +35 to +120 degrees) is left out, and saturation lifts
+     * the warm ones so neighbours stay apart from across the room. */
+    var COLOURS = [
+      { id: 0, name: 'Original', hue: 0, sat: 1, tint: '#ebc56c' },
+      { id: 1, name: 'Ember', hue: -30, sat: 1.3, tint: '#ffa868' },
+      { id: 2, name: 'Rose', hue: -65, sat: 1.1, tint: '#ff9fb0' },
+      { id: 3, name: 'Orchid', hue: -100, sat: 1, tint: '#f7a8f0' },
+      { id: 4, name: 'Amethyst', hue: -135, sat: 1.1, tint: '#d9a8ff' },
+      { id: 5, name: 'Sapphire', hue: -168, sat: 1.1, tint: '#a9b4ff' },
+      { id: 6, name: 'Lagoon', hue: 160, sat: 1.2, tint: '#6cc8ff' },
+      { id: 7, name: 'Seaglass', hue: 132, sat: 0.95, tint: '#6fd3d6' }
+    ];
+    function validColour(v) { return typeof v === 'number' && Math.floor(v) === v && v >= 0 && v < COLOURS.length; }
+    function colour(v) { return COLOURS[validColour(v) ? v : 0]; }
+    /* The CSS filter for a colour number: 'none' for variant 0 and anything that is not a colour. */
+    function filterFor(v) { var c = colour(v); return c.id === 0 ? 'none' : 'hue-rotate(' + c.hue + 'deg) saturate(' + c.sat + ')'; }
+    /* The colour the next companion of a species gets, given the colours already used by that species in the class: the
+     * lowest free number, and once all eight are taken the least used one (the lowest of those). */
+    function nextColour(used) {
+      var count = COLOURS.map(function () { return 0; });
+      (used || []).forEach(function (v) { if (validColour(v)) count[v]++; });
+      var best = 0;
+      for (var i = 0; i < count.length; i++) { if (!count[i]) return i; if (count[i] < count[best]) best = i; }
+      return best;
+    }
+    /* Every companion's colour in one class: [{id, species, eggAt, colour}] for every pupil of the class with a companion, archived ones included, ->
+     * {id: colour}. A stored colour is kept; a companion without one (made before colours) gets nextColour over its
+     * species, in order of eggAt (then id), counting the stored ones first. The server stores what this answers when a
+     * teacher or the owner reads; until then every read works out the same colours. */
+    function assignColours(list) {
+      var out = {}, used = {}, missing = [];
+      (list || []).forEach(function (c) {
+        if (!c || !companion(c.species)) return;
+        if (validColour(c.colour)) { out[c.id] = c.colour; (used[c.species] = used[c.species] || []).push(c.colour); } else missing.push(c);
+      });
+      missing.sort(function (a, b) { var x = iso(a.eggAt), y = iso(b.eggAt); return x < y ? -1 : x > y ? 1 : String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0; });
+      missing.forEach(function (c) { var u = used[c.species] = used[c.species] || [], v = nextColour(u); out[c.id] = v; u.push(v); });
+      return out;
+    }
+    /* Every stage visible (section 7): the growth row, six small pictures (the egg, then stages 1 to 5) of one species in
+     * one colour, as HTML for My room, the board's egg dialog and the Pupil screen dialog. o: {species, colour, stage (0 the
+     * egg, 1 to 5 hatched; -1 a preview with nothing reached), nextMark, growsTonight, tonightStage (as growth() answers
+     * them), art(name) -> a picture address already checked by the page}. Reached stages are bright with their names, the
+     * ones still to come dimmed with their names, the current one marked; the caption says "Grows tonight" (and the stage
+     * it grows into tonight is marked sk-tonight) once the mark is reached, else "Grows at ✦ N" when nextMark is given.
+     * The art is the pictures each page already has. */
+    function growthHTML(o) {
+      o = o || {};
+      var kind = companion(o.species); if (!kind) return '';
+      var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); };
+      var stage = typeof o.stage === 'number' && isFinite(o.stage) ? Math.max(-1, Math.min(5, Math.floor(o.stage))) : -1, preview = stage < 0;
+      var f = filterFor(o.colour), names = ['Egg'].concat(kind.stages), next = Number(o.nextMark), items = '';
+      // The stage it grows into tonight (growth() gives tonightStage; one stage up when it is missing); 0 when none.
+      var ts = Math.floor(Number(o.tonightStage)), tonight = !preview && stage >= 1 && stage < 5 && o.growsTonight === true ? Math.min(5, ts > stage ? ts : stage + 1) : 0;
+      names.forEach(function (name, i) {
+        var src = typeof o.art === 'function' ? o.art(o.species + '-' + (i || 'egg')) : '', reached = preview || i <= stage, now = !preview && i === stage, soon = tonight > 0 && i === tonight;
+        items += '<li class="sk-step ' + (reached ? 'sk-reached' : 'sk-ahead') + (now ? ' sk-now' : '') + (soon ? ' sk-tonight' : '') + '"' + (now ? ' aria-current="step"' : '') + '>' +
+          '<span class="sk-pic">' + (src ? '<img src="' + esc(src) + '" alt="" draggable="false" loading="lazy" decoding="async"' + (f === 'none' ? '' : ' style="filter:' + f + '"') + '>' : '') + '</span>' +
+          '<span class="sk-name">' + esc(name) + '</span>' + (now ? '<span class="sk-sr"> (now)</span>' : soon ? '<span class="sk-sr"> (grows tonight)</span>' : !reached ? '<span class="sk-sr"> (still to come)</span>' : '') + '</li>';
+      });
+      var label = kind.name + (validColour(o.colour) && o.colour ? ', colour ' + (o.colour + 1) + ' of ' + COLOURS.length : '') + ': every stage';
+      return '<div class="sk-growth" role="group" aria-label="' + esc(label) + '"><ol class="sk-steps">' + items + '</ol>' +
+        (tonight ? '<p class="sk-cap">Grows tonight</p>' : isFinite(next) && next > 0 && o.nextMark !== null && o.nextMark !== undefined ? '<p class="sk-cap">Grows at ✦ ' + next + '</p>' : '') + '</div>';
+    }
+    /* The text kept in the Students tab, and reading it back (null for anything that is not a companion). colour is kept
+     * only when it is one of the eight; records made before colours have none and still read. */
+    function record(c) {
+      var out = { species: String(c.species), state: c.state === 'pet' ? 'pet' : 'egg', eggAt: iso(c.eggAt), hatchedAt: c.state === 'pet' ? iso(c.hatchedAt) : '' };
+      if (validColour(c.colour)) out.colour = c.colour;
+      return JSON.stringify(out);
+    }
     function parse(text) {
       if (typeof text !== 'string' || text.charAt(0) !== '{' || text.length > 200) return null;
       var c; try { c = JSON.parse(text); } catch (ignore) { return null; }
       if (!c || !companion(c.species) || (c.state !== 'egg' && c.state !== 'pet') || !iso(c.eggAt)) return null;
       if (c.state === 'pet' && !iso(c.hatchedAt)) return null;
-      return { species: String(c.species), state: c.state, eggAt: iso(c.eggAt), hatchedAt: c.state === 'pet' ? iso(c.hatchedAt) : '' };
+      var out = { species: String(c.species), state: c.state, eggAt: iso(c.eggAt), hatchedAt: c.state === 'pet' ? iso(c.hatchedAt) : '' };
+      if (validColour(c.colour)) out.colour = c.colour;
+      return out;
     }
-    return { COMPANIONS: COMPANIONS, EGG_MARK: EGG_MARK, MARKS: MARKS, companion: companion, stageFor: stageFor, nextMark: nextMark, growth: growth, record: record, parse: parse, midnightAfter: midnightAfter };
+    return { COMPANIONS: COMPANIONS, EGG_MARK: EGG_MARK, MARKS: MARKS, COLOURS: COLOURS, companion: companion, stageFor: stageFor, nextMark: nextMark, growth: growth, record: record, parse: parse, midnightAfter: midnightAfter,
+      validColour: validColour, colour: colour, filterFor: filterFor, nextColour: nextColour, assignColours: assignColours, growthHTML: growthHTML };
   })();
 
   /* ---------- Care from home (pet, water, snack, walk) and the mood it gives ----------
@@ -9121,7 +9216,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
   if (typeof PointsCore === 'undefined' || typeof PointsAvatar === 'undefined') return;
   const P = PointsCore, A = PointsAvatar, K = P.SPARKADE;
   const V = typeof SparkadeAvatar !== 'undefined' ? SparkadeAvatar : null;
-  var SP_TEACHER_ART = {"dragon-1":"assets/sparkade-dragon-1.webp","wolf-1":"assets/sparkade-wolf-1.webp","sunbird-1":"assets/sparkade-sunbird-1.webp","otter-1":"assets/sparkade-otter-1.webp","grove-1":"assets/sparkade-grove-1.webp"};
+  var SP_TEACHER_ART = window.CP_PORTAL_MODE === "reportcards" ? {} : {"dragon-egg":"assets/sparkade-dragon-egg.webp","dragon-1":"https://sparkportal.kr/sparkade/art/dragon-1.webp","dragon-2":"https://sparkportal.kr/sparkade/art/dragon-2.webp","dragon-3":"assets/sparkade-dragon-3.webp","dragon-4":"https://sparkportal.kr/sparkade/art/dragon-4.webp","dragon-5":"https://sparkportal.kr/sparkade/art/dragon-5.webp","wolf-egg":"assets/sparkade-wolf-egg.webp","wolf-1":"https://sparkportal.kr/sparkade/art/wolf-1.webp","wolf-2":"https://sparkportal.kr/sparkade/art/wolf-2.webp","wolf-3":"assets/sparkade-wolf-3.webp","wolf-4":"https://sparkportal.kr/sparkade/art/wolf-4.webp","wolf-5":"https://sparkportal.kr/sparkade/art/wolf-5.webp","sunbird-egg":"assets/sparkade-sunbird-egg.webp","sunbird-1":"https://sparkportal.kr/sparkade/art/sunbird-1.webp","sunbird-2":"https://sparkportal.kr/sparkade/art/sunbird-2.webp","sunbird-3":"assets/sparkade-sunbird-3.webp","sunbird-4":"https://sparkportal.kr/sparkade/art/sunbird-4.webp","sunbird-5":"https://sparkportal.kr/sparkade/art/sunbird-5.webp","otter-egg":"assets/sparkade-otter-egg.webp","otter-1":"https://sparkportal.kr/sparkade/art/otter-1.webp","otter-2":"https://sparkportal.kr/sparkade/art/otter-2.webp","otter-3":"assets/sparkade-otter-3.webp","otter-4":"https://sparkportal.kr/sparkade/art/otter-4.webp","otter-5":"https://sparkportal.kr/sparkade/art/otter-5.webp","grove-egg":"assets/sparkade-grove-egg.webp","grove-1":"https://sparkportal.kr/sparkade/art/grove-1.webp","grove-2":"https://sparkportal.kr/sparkade/art/grove-2.webp","grove-3":"assets/sparkade-grove-3.webp","grove-4":"https://sparkportal.kr/sparkade/art/grove-4.webp","grove-5":"https://sparkportal.kr/sparkade/art/grove-5.webp"};
   const DEMO = window.CP_DEMO_MODE === true;
   const PREFS = 'cp-points-prefs-v1', SAMPLE = 'cp-points-sample-v1';
   const S = { data: null, classId: '', view: 'board', loading: false, error: '', base: {}, q: [], flight: null, failed: '', failedUnknown: false, selecting: false, selected: new Set(),
@@ -9287,8 +9382,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     }
     function load() { if (M) return M; const saved = readJson(SAMPLE); M = saved && saved.v === 2 && Array.isArray(saved.awards) ? saved : seed(); return M; }
     /* The companion as the server describes it: the stage from the awards (no purchases in the sample). */
+    /* Companion colours as the server gives them (PointsCore.SPARKADE.assignColours over every pupil of the class, archived
+     * ones included, so a pupil who comes back keeps a colour no one else has). */
+    const coloursOf = classId => K.assignColours(M.students.filter(x => x.classId === classId).map(x => { const c = K.parse(String(x.companion || '')); return c ? { id: x.studentId, species: c.species, eggAt: c.eggAt, colour: c.colour } : null; }).filter(Boolean));
     const companionOut = s => { const c = K.parse(String(s.companion || '')); if (!c) return null; const kind = K.companion(c.species), g = K.growth({ hatchedAt: c.hatchedAt, awards: list(s.classId).filter(a => a.studentId === s.studentId), purchases: [], now: Date.now() });
-      return { species: c.species, name: kind.name, state: c.state, stage: g.stage, stageName: g.stage ? kind.stages[g.stage - 1] : '', stages: kind.stages, nextMark: c.state === 'pet' ? g.nextMark : null, grewLastNight: g.grewLastNight, growsTonight: g.growsTonight, eggAt: c.eggAt, hatchedAt: c.hatchedAt }; };
+      const colour = K.validColour(c.colour) ? c.colour : (coloursOf(s.classId)[s.studentId] || 0);
+      return { species: c.species, name: kind.name, state: c.state, stage: g.stage, stageName: g.stage ? kind.stages[g.stage - 1] : '', stages: kind.stages, colour, nextMark: c.state === 'pet' ? g.nextMark : null, grewLastNight: g.grewLastNight, growsTonight: g.growsTonight, tonightStage: g.tonightStage, eggAt: c.eggAt, hatchedAt: c.hatchedAt }; };
     function save() { writeJson(SAMPLE, M); }
     const list = classId => M.awards.filter(a => a.classId === classId).map(a => ({ studentId: a.studentId, points: a.points, at: a.at, undone: a.undone }));
     function clsOut(c) {
@@ -9326,10 +9425,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       decideClaims(p) { load(); return later(Object.assign({ ok: true, decided: [], given: 0 }, totalsOut(cls(p.classId)))); },
       giveEgg(p) { load(); const c = cls(p.classId), s = M.students.find(x => x.classId === c.classId && x.studentId === p.studentId && x.active), kind = K.companion(p.species); if (!s) return Promise.reject(new Error('This pupil is not in this class any more. Reload Points.')); if (!kind) return Promise.reject(new Error('Choose one of the five companions.'));
         if (K.parse(String(s.companion || ''))) return Promise.reject(new Error(s.name + ' already has a companion. There is one companion for good.')); const balance = (P.totals(list(c.classId))[s.studentId] || {}).points || 0; if (balance < K.EGG_MARK) return Promise.reject(new Error(s.name + ' needs ' + K.EGG_MARK + ' ' + P.CURRENCY.many + ' to spend before choosing an egg (has ' + balance + ').'));
-        s.companion = K.record({ species: kind.id, state: 'egg', eggAt: new Date().toISOString() }); save(); return later({ ok: true, studentId: s.studentId, companion: companionOut(s) }); },
+        const colours = coloursOf(c.classId), used = M.students.filter(x => x !== s && x.classId === c.classId && (K.parse(String(x.companion || '')) || {}).species === kind.id).map(x => colours[x.studentId]);
+        M.students.forEach(x => { const o = x.classId === c.classId ? K.parse(String(x.companion || '')) : null; if (o && !K.validColour(o.colour)) { o.colour = colours[x.studentId]; x.companion = K.record(o); } });
+        s.companion = K.record({ species: kind.id, state: 'egg', eggAt: new Date().toISOString(), colour: K.nextColour(used) }); save(); return later({ ok: true, studentId: s.studentId, companion: companionOut(s) }); },
       hatch(p) { load(); const c = cls(p.classId), s = M.students.find(x => x.classId === c.classId && x.studentId === p.studentId && x.active); if (!s) return Promise.reject(new Error('This pupil is not in this class any more. Reload Points.')); const k = K.parse(String(s.companion || ''));
         if (!k) return Promise.reject(new Error(s.name + ' has no egg yet. Choose an egg together first.')); if (k.state === 'pet') return Promise.reject(new Error(s.name + '’s egg has already hatched.'));
-        s.companion = K.record({ species: k.species, state: 'pet', eggAt: k.eggAt, hatchedAt: new Date().toISOString() }); save(); return later({ ok: true, studentId: s.studentId, companion: companionOut(s) }); },
+        s.companion = K.record({ species: k.species, state: 'pet', eggAt: k.eggAt, hatchedAt: new Date().toISOString(), colour: K.validColour(k.colour) ? k.colour : coloursOf(c.classId)[s.studentId] }); save(); return later({ ok: true, studentId: s.studentId, companion: companionOut(s) }); },
       saveAvatar(p) { load(); const c = cls(p.classId), s = M.students.find(x => x.classId === c.classId && x.studentId === p.studentId && x.active), value = V && V.parse(p.avatarV2);
         if (!s) return Promise.reject(new Error('This pupil is not in this class any more. Reload Points.'));
         if (!value) return Promise.reject(new Error('Choose a valid SPARKADE avatar.'));
@@ -9587,12 +9688,17 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
         close(); if (cls() === c) { renderBoard(); if (!r.unchanged) celebrate({ kind: 'egg', student: who || s, companion: r.companion }); }
       }).catch(e => { st.busy = false; st.uncertain = st.uncertain || !!(e && e.outcomeUnknown); give.disabled = false; draw(); msg.textContent = saveFailureText(e) + (st.uncertain ? ' Retry checks the same permanent companion choice.' : ''); });
     } }, 'Give the egg');
+    // Every stage visible (section 7): the chosen species' egg and five stages in the colour this pupil will get, and the
+    // colour said in words so the teacher knows ("Prism Dragon, colour 3 of 8"). The server assigns it the same way.
+    const preview = h('div', { class: 'pts-egg-preview', 'aria-live': 'polite' });
     const draw = () => { grid.replaceChildren(...K.COMPANIONS.map(kind => h('button', { type: 'button', disabled: st.busy || st.uncertain, class: 'pts-egg-pick' + (st.species === kind.id ? ' pts-egg-on' : ''), 'aria-pressed': st.species === kind.id ? 'true' : 'false', onclick: () => { if (st.busy || st.uncertain) return; st.species = kind.id; give.disabled = false; give.textContent = 'Give ' + s.name + ' the ' + kind.name + ' egg'; draw(); focusQuietly(grid.querySelector('[aria-pressed="true"]')); } },
-      babyArt(kind), h('span', { class: 'pts-egg-name', text: kind.name }), h('span', { class: 'pts-egg-stages', text: kind.stages.join(' → ') })))); };
+      babyArt(kind), h('span', { class: 'pts-egg-name', text: kind.name }), h('span', { class: 'pts-egg-stages', text: kind.stages.join(' → ') }))));
+      const kind = K.companion(st.species), n = kind ? colourFor(c, s, kind.id) : 0;
+      preview.replaceChildren(...(kind ? [h('p', { class: 'pts-egg-colour' }, h('b', { text: kind.name + ', colour ' + (n + 1) + ' of ' + K.COLOURS.length }), ' · ' + K.COLOURS[n].name + (n ? '' : ' (the art as drawn)') + '. Every stage ' + s.name + '’s companion will grow through:'), growthRow({ species: kind.id, colour: n, stage: -1 })] : [h('p', { class: 'pts-help', text: 'Tap a companion to see every stage it grows through, in the colour ' + s.name + ' will get.' })])); };
     draw();
     const dialog = h('div', { class: 'pts-award pts-egg-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Choose an egg with ' + s.name },
       h('div', { class: 'pts-award-head' }, h('span', { class: 'pts-award-art', html: avatar(s, 'eg') }), h('div', null, h('p', { class: 'pts-award-who', text: 'Choose an egg with ' + s.name }), h('p', { class: 'pts-award-now', text: 'Free, one companion for good. Let ' + s.name + ' pick; you tap it.' })), h('button', { type: 'button', class: 'pts-x', 'aria-label': 'Close', onclick: close }, '×')),
-      grid, msg, h('div', { class: 'cp-actions' }, give, h('button', { type: 'button', class: 'cp-secondary', onclick: close }, 'Not now')));
+      grid, preview, msg, h('div', { class: 'cp-actions' }, give, h('button', { type: 'button', class: 'cp-secondary', onclick: close }, 'Not now')));
     const layer = h('div', { class: 'pts-layer', onclick: e => { if (e.target === layer) close(); } }, dialog);
     const onKey = e => {
       if (e.key === 'Escape') { e.preventDefault(); close(); return; }
@@ -9602,11 +9708,24 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     S.ui.stage.append(layer);
     focusQuietly(grid.querySelector('button'));
   }
-  /* The baby from the look book where the build embedded it; a plain mark otherwise. */
-  function babyArt(kind) {
-    const src = SP_TEACHER_ART[kind.id + '-1'];
-    if (typeof src === 'string' && /^(?:data:image\/webp;base64,[A-Za-z0-9+/=]+|[A-Za-z0-9_./-]+\.webp)$/.test(src)) return h('img', { class: 'pts-egg-art', src, alt: '', draggable: 'false' });
+  /* The companion pictures the build gave the board (every species: the egg and stages 1 to 5): the eggs and stage 3
+   * embedded, the other stages on the static site (https://sparkportal.kr/sparkade/art/<name>.webp, build-pilot.cjs), or
+   * files beside the static page; '' when one is missing or is any other address. */
+  function teacherArt(name) { const src = Object.prototype.hasOwnProperty.call(SP_TEACHER_ART, name) ? SP_TEACHER_ART[name] : ''; return typeof src === 'string' && /^(?:data:image\/webp;base64,[A-Za-z0-9+/=]+|(?:assets\/sparkade-|\/?art\/)?[a-z0-9-]+\.webp|https:\/\/sparkportal\.kr\/sparkade\/art\/[a-z0-9-]+\.webp)$/.test(src) ? src : ''; }
+  /* A companion's picture in a colour (variant 0 by default); a plain mark when the picture is missing. The picker shows
+   * all five species at stage 3 (section 7), so the teacher sees what each becomes. */
+  function companionArt(kind, stage, colour) {
+    const src = teacherArt(kind.id + '-' + (stage || 'egg')), f = K.filterFor(colour);
+    if (src) return h('img', { class: 'pts-egg-art', src, alt: '', draggable: 'false', style: f === 'none' ? null : 'filter:' + f });
     return h('span', { class: 'pts-egg-art pts-egg-mark', 'aria-hidden': 'true', style: 'background:radial-gradient(circle at 35% 30%,#fff,' + kind.colour + ' 40%,' + kind.shade + ')' });
+  }
+  function babyArt(kind) { return companionArt(kind, 3, 0); }
+  /* The growth row (PointsCore.SPARKADE.growthHTML) with the board's pictures. */
+  function growthRow(o) { return h('div', { class: 'pts-growth', html: K.growthHTML(Object.assign({ art: teacherArt }, o)) }); }
+  /* The colour the server will give this pupil's egg of a species: the lowest free among the class's other pupils of that
+   * species, archived ones included (their colours as the board read them; the board lists archived pupils too). */
+  function colourFor(c, s, species) {
+    return K.nextColour(c.students.filter(x => x.studentId !== s.studentId && x.companion && x.companion.species === species).map(x => x.companion.colour));
   }
   function hatch(s) {
     const c = cls(); if (!c || !s || S.hatching) return;
@@ -9909,6 +10028,24 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     focusQuietly(dialog.querySelector('.pts-claim .cp-primary') || dialog.querySelector('.pts-new-quest'));
   }
 
+  /* Every stage visible (section 7), in the Pupil screen dialog: the growth row My room shows, for a species (the art as
+   * drawn) or for a pupil (their colour, their stage and the next mark). Nothing here is saved. */
+  function growthBlock(c) {
+    const pupils = c.students.filter(x => x.active !== false && x.companion && K.companion(x.companion.species));
+    const select = h('select', { id: 'pts-screen-growth' },
+      h('optgroup', { label: 'Companions' }, K.COMPANIONS.map(k => h('option', { value: 'species:' + k.id }, k.name))),
+      pupils.length ? h('optgroup', { label: 'Pupils' }, pupils.map(x => h('option', { value: 'pupil:' + x.studentId }, x.name + ' · ' + x.companion.name + ', colour ' + ((K.validColour(x.companion.colour) ? x.companion.colour : 0) + 1) + ' of ' + K.COLOURS.length))) : null);
+    const box = h('div', { class: 'pts-screen-growthrow' });
+    const draw = () => {
+      const [kind, id] = String(select.value || '').split(':'), who = kind === 'pupil' ? pupils.find(x => x.studentId === id) : null, cp = who && who.companion;
+      box.replaceChildren(cp ? growthRow({ species: cp.species, colour: cp.colour, stage: cp.state === 'pet' ? Number(cp.stage) || 1 : 0, nextMark: cp.state === 'pet' ? cp.nextMark : null, growsTonight: cp.state === 'pet' && cp.growsTonight === true, tonightStage: cp.tonightStage }) : growthRow({ species: id || K.COMPANIONS[0].id, colour: 0, stage: -1 }));
+    };
+    select.addEventListener('change', draw); draw();
+    return h('section', { class: 'pts-screen-block pts-screen-growth' },
+      h('label', { class: 'cl-field', for: 'pts-screen-growth' }, h('span', { text: 'Companions: every stage' }), select), box,
+      h('p', { class: 'pts-help', text: 'What pupils see in My room. When several pupils have the same companion, each has its own colour.' }));
+  }
+
   /* ---------- the Pupil screen dialog ---------- */
   function openScreen() {
     const c = cls(); if (!c) return;
@@ -9942,7 +10079,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       check('crest', 'Class crest and milestones'),
       h('div', { class: 'pts-screen-pair' }, sky.field, weather.field),
       check('care', 'Care at home', 'Pupils can pet, water, feed and walk their companion in My room.'),
-      check('sound', 'Sound on pupils’ screens', 'The starting choice only. Pupils still tap to turn sound on.'));
+      check('sound', 'Sound on pupils’ screens', 'The starting choice only. Pupils still tap to turn sound on.'),
+      growthBlock(c));
     const save = () => {
       if (st.busy) return;
       const text = String(banner.value || '').replace(/\s+/g, ' ').trim();
@@ -9979,7 +10117,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
     let art = '', title = '', line = '';
     if (what.kind === 'goal') { art = P.jarSvg(c.goal.target, c.goal.target, 'party'); title = (c.goal.name || 'Class goal') + ' unlocked!'; line = 'The whole class filled the jar with ' + P.sparks(c.goal.target) + '.'; sfx.goal(); confetti(true); }
     else if (what.kind === 'egg' || what.kind === 'hatch') {
-      const s = what.student, k = what.companion, kind = K.companion(k.species) || K.COMPANIONS[0], baby = babyArt(kind);
+      const s = what.student, k = what.companion, kind = K.companion(k.species) || K.COMPANIONS[0], baby = companionArt(kind, 1, k.colour);
       art = what.kind === 'hatch' ? baby.outerHTML : avatar(s, 'cel', 'cheer');
       title = what.kind === 'hatch' ? s.name + '’s ' + kind.name + ' hatched!' : s.name + ' chose the ' + kind.name + ' egg!';
       line = what.kind === 'hatch' ? 'A ' + kind.stages[0] + '. It grows the night after ' + s.name + ' reaches 25 ' + P.CURRENCY.many + ' to spend.' : 'Hatch it here when the moment is right. One companion for good.';
