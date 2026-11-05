@@ -2,6 +2,7 @@
 <html lang="en">
 <head><meta name="robots" content="noindex,nofollow"><script>
 window.CP_GATEWAY = {url: "https://script.google.com/macros/s/AKfycbz_yisUT04XOY23wQSd2Yzps9EfkE6C_W73QTh2XydzSyRlLQTlm4tEeS9GW5IVWOuK/exec", clientId: "313510619105-irt8a6pde830lqes16lb2sdnsm0d1c28.apps.googleusercontent.com", live: /(?:^|[?&])live=1(?:&|$)/.test(location.search)};
+window.SP_MARKET_ART = {"mk-cape":"/sparkade/wear/mk-cape-stand.webp","mk-star-badge":"/sparkade/wear/mk-star-badge-stand.webp","mk-round-glasses":"/sparkade/wear/mk-round-glasses-stand.webp","mk-explorer-jacket":"/sparkade/wear/mk-explorer-jacket-stand.webp","mk-festival-jacket":"/sparkade/wear/mk-festival-jacket-stand.webp","mk-hanbok-vest":"/sparkade/wear/mk-hanbok-vest-stand.webp","mk-crown-hairpin":"/sparkade/wear/mk-crown-hairpin-stand.webp","mk-scarf":"/sparkade/wear/mk-scarf-stand.webp","mk-rain-boots":"/sparkade/wear/mk-rain-boots-stand.webp","mk-backpack":"/sparkade/wear/mk-backpack-stand.webp","mk-curtains":"/sparkade/dorm/mk-curtains-room-wide.webp","mk-fairy-lights":"/sparkade/dorm/mk-fairy-lights.webp","mk-framed-drawing":"/sparkade/dorm/mk-framed-drawing.webp","mk-lantern":"/sparkade/dorm/mk-lantern.webp","mk-navy-banner":"/sparkade/dorm/mk-navy-banner.webp","mk-pet-bed":"/sparkade/dorm/mk-pet-bed-room-wide.webp","mk-plant":"/sparkade/dorm/mk-plant-room-wide.webp","mk-round-rug":"/sparkade/dorm/mk-round-rug-room-wide.webp","mk-star-quilt":"/sparkade/dorm/mk-star-quilt.webp","mk-striped-rug":"/sparkade/dorm/mk-striped-rug-room-wide.webp","mk-toy-chest":"/sparkade/dorm/mk-toy-chest.webp","mk-trophy-shelf":"/sparkade/dorm/mk-trophy-shelf-room-wide.webp"};
 /* Custom-domain gateway, page side (owner decision, 21 October 2026). tools/build-site.cjs puts this script at the top of
  * the page served at the portal's own address (pilot/site.json); it is never inside the Apps Script page, which has the
  * real google.script.run. It does three things:
@@ -398,6 +399,96 @@ window.CP_DEMO_REPORT_FIXTURE = {"Classes":[{"id":"demo-class","name":"Demo Clas
       const next=copy(data),exam=update(next.exams,p,e=>e.studentId===p.studentId&&e.periodId===p.periodId);commit(next);return {ok:true,exam,demo:true};
     }
     throw Error('This action is not available. No academy record has been changed.');
+  };
+})();
+/* SPARKADE Market in the sample (plan 9.7): the board's sample keeps it here, in this browser, with the server's answers.
+   The first sample class (the invented Example Otters) starts with things given, a gift and wishes. Invented records only. */
+(function(){
+  'use strict';
+  if(window.CP_DEMO_MODE!==true)return;
+  const KEY='cp-points-market-v1',DAY=86400000,MAX_PRICE=1000;
+  const copy=x=>JSON.parse(JSON.stringify(x));
+  const cat=()=>{const M=window.SparkadeMarket;if(!M||!Array.isArray(M.ITEMS))throw Error('The Market is not available in this sample.');return M;};
+  const id=prefix=>prefix+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+  let S=null;
+  function store(){try{return window.localStorage;}catch(_){return null;}}
+  function load(){if(S)return S;try{const s=store(),raw=s&&s.getItem(KEY),v=raw?JSON.parse(raw):null;if(v&&v.v===1&&Array.isArray(v.purchases)&&Array.isArray(v.wishes)&&v.shop&&typeof v.shop==='object')S=v;}catch(_){S=null;}if(!S)S={v:1,shop:{},purchases:[],wishes:[],seeded:{}};return S;}
+  function save(){try{const s=store();if(s)s.setItem(KEY,JSON.stringify(S));}catch(_){}}
+  function priceOf(itemId){const it=cat().item(itemId),o=load().shop[itemId];return o&&Number.isFinite(Number(o.price))?Number(o.price):it.price;}
+  function activeOf(itemId){const o=load().shop[itemId];return o?o.active!==false:true;}
+  const live=(classId,studentId)=>load().purchases.filter(p=>p.classId===classId&&(!studentId||p.studentId===studentId)&&!p.undone);
+  const ownedIds=(classId,studentId)=>cat().owned(load().purchases.filter(p=>p.classId===classId&&p.studentId===studentId).map(p=>({itemId:p.itemId,at:p.at,undone:p.undone})));
+  const waitingOf=(classId,studentId)=>load().wishes.filter(w=>w.classId===classId&&w.studentId===studentId&&w.status==='waiting').sort((a,b)=>a.at.localeCompare(b.at));
+  function seed(classId,pupils){
+    const st=load();if(st.seeded[classId]||!pupils.length)return;st.seeded[classId]=true;
+    if(Object.keys(st.seeded).length>1){save();return;}
+    const at=n=>new Date(Date.now()-n*DAY).toISOString(),rich=pupils.slice().sort((a,b)=>b.points-a.points||a.studentId.localeCompare(b.studentId));
+    const give=(p,itemId,days,target)=>{const price=cat().item(itemId).price,spent=live(classId,p.studentId).reduce((n,x)=>n+x.price,0);if(p.points-spent<price)return;const purchaseId=id('gseed');st.purchases.push({purchaseId,at:at(days),classId,studentId:p.studentId,itemId,price,undone:false,target});if(target==='wish')st.wishes.push({wishId:id('w'),at:at(days+3),classId,studentId:p.studentId,itemId,status:'granted',decidedAt:at(days),purchaseId});};
+    const wish=(p,itemId,days)=>{if(p&&!ownedIds(classId,p.studentId).includes(itemId))st.wishes.push({wishId:id('w'),at:at(days),classId,studentId:p.studentId,itemId,status:'waiting',decidedAt:'',purchaseId:''});};
+    if(rich[0]){give(rich[0],'mk-cape',9,'wish');give(rich[0],'mk-star-quilt',2,'gift');wish(rich[0],'mk-star-badge',1);}
+    if(rich[1]){give(rich[1],'mk-round-glasses',6,'gift');wish(rich[1],'mk-wizard-hat',2);}
+    if(rich[2]){wish(rich[2],'mk-scarf',3);wish(rich[2],'mk-plant',1);}
+    wish(rich[rich.length-1],'mk-explorer-jacket',2);
+    save();
+  }
+  function marketOf(classId,studentId){const M=cat(),owned=ownedIds(classId,studentId);return {owned,dress:M.dress(owned),dorm:M.dorm(owned),wishes:waitingOf(classId,studentId).map(w=>w.itemId)};}
+  function ungrant(p){
+    if(p.target!=='wish')return;
+    const w=load().wishes.find(x=>x.classId===p.classId&&x.purchaseId===p.purchaseId&&x.status==='granted');if(!w)return;
+    const open=waitingOf(p.classId,w.studentId).length<cat().MAX_WISHES;w.status=open?'waiting':'withdrawn';w.decidedAt=open?'':new Date().toISOString();
+  }
+  function catalogue(){return cat().ITEMS.map(it=>({id:it.id,kind:it.kind,slot:it.slot,name:it.name,price:priceOf(it.id),suggested:it.price,active:activeOf(it.id)}));}
+  window.CP_DEMO_MARKET={
+    catalogue,
+    classOut(classId,pupils){
+      seed(classId,pupils);
+      const per={},names={},balance={};
+      pupils.forEach(p=>{const spent=live(classId,p.studentId).reduce((n,x)=>n+x.price,0);per[p.studentId]={spent,market:marketOf(classId,p.studentId)};names[p.studentId]=p.name;balance[p.studentId]=p.points-spent;});
+      const wishes=load().wishes.filter(w=>w.classId===classId&&w.status==='waiting'&&pupils.some(p=>p.studentId===w.studentId&&p.active!==false)).map(w=>{const price=priceOf(w.itemId),g=cat().progress(balance[w.studentId],price);return {wishId:w.wishId,at:w.at,studentId:w.studentId,itemId:w.itemId,price,ready:g.ready,left:g.left};})
+        .sort((a,b)=>(b.ready-a.ready)||String(names[a.studentId]).localeCompare(String(names[b.studentId]))||a.at.localeCompare(b.at));
+      const buys=load().purchases.filter(p=>p.classId===classId).map(p=>({purchaseId:p.purchaseId,at:p.at,studentId:p.studentId,itemId:p.itemId,name:cat().item(p.itemId).name,price:p.price,undone:p.undone}));
+      return {per,wishes,buys};
+    },
+    grant(p,ctx){
+      const M=cat(),grantId=String(p.grantId||''),itemId=String(p.itemId||'');
+      if(!/^g[A-Za-z0-9_-]{8,39}$/.test(grantId))throw Error('This gift was not sent correctly. Reload Points.');
+      if(!ctx.pupil)throw Error('This pupil is not in this class any more. Reload Points.');
+      const classId=String(p.classId),studentId=ctx.pupil.studentId,st=load();
+      if(!M.valid(itemId)||!activeOf(itemId))return {ok:false,reason:'off'};
+      const same=st.purchases.find(x=>x.purchaseId===grantId),spent=()=>live(classId,studentId).reduce((n,x)=>n+x.price,0);
+      const done=(row,extra)=>{const m=marketOf(classId,studentId);return Object.assign({ok:true},extra,{purchaseId:row.purchaseId,studentId,itemId:row.itemId,price:row.price,balance:ctx.points-spent(),dress:m.dress,dorm:m.dorm});};
+      if(same){if(same.classId===classId&&same.studentId===studentId&&same.itemId===itemId)return done(same,{again:true});throw Error('This gift was not sent correctly. Reload Points.');}
+      if(ownedIds(classId,studentId).includes(itemId))return {ok:false,reason:'owned'};
+      const price=priceOf(itemId),balance=ctx.points-spent();
+      if(balance<price)return {ok:false,reason:'sparkles',balance,price};
+      const w=st.wishes.filter(x=>x.classId===classId&&x.studentId===studentId&&x.itemId===itemId&&x.status==='waiting').pop(),now=new Date().toISOString();
+      const row={purchaseId:grantId,at:now,classId,studentId,itemId,price,undone:false,target:w?'wish':'gift'};st.purchases.push(row);
+      if(w){w.status='granted';w.decidedAt=now;w.purchaseId=grantId;}
+      save();return done(row,{});
+    },
+    wish(p,ctx){
+      const M=cat(),itemId=p.itemId,on=p.on;
+      if(!M.valid(itemId)||typeof on!=='boolean')return {ok:false,reason:'item'};
+      if(!ctx.pupil)return {ok:false,reason:'gone'};
+      if(ctx.market===false)return {ok:false,reason:'closed'};
+      const classId=String(p.classId),studentId=ctx.pupil.studentId,st=load(),list=()=>waitingOf(classId,studentId).map(w=>w.itemId);
+      if(!activeOf(itemId))return {ok:false,reason:'item'};
+      if(ownedIds(classId,studentId).includes(itemId))return {ok:false,reason:'owned'};
+      const mine=st.wishes.filter(w=>w.classId===classId&&w.studentId===studentId&&w.itemId===itemId),waiting=mine.find(w=>w.status==='waiting'),now=new Date().toISOString();
+      if(on){
+        if(waiting)return {ok:true,again:true,wishes:list()};
+        if(list().length>=M.MAX_WISHES)return {ok:false,reason:'full',wishes:list()};
+        const again=mine.filter(w=>w.status!=='granted').pop();
+        if(again){again.status='waiting';again.at=now;again.decidedAt='';}else st.wishes.push({wishId:id('w'),at:now,classId,studentId,itemId,status:'waiting',decidedAt:'',purchaseId:''});
+      }else{if(!waiting)return {ok:true,again:true,wishes:list()};waiting.status='withdrawn';waiting.decidedAt=now;}
+      save();return {ok:true,wishes:list()};
+    },
+    saveShop(items){
+      const M=cat(),clean={};
+      items.forEach(w=>{const it=M.valid(w.itemId)?M.item(w.itemId):null;if(!it)throw Error('An item in the shop is not known. Reload Points.');const n=Math.round(Number(w.price));if(String(w.price).trim()===''||!(n>=0&&n<=MAX_PRICE))throw Error(it.name+' needs a price from 0 to '+MAX_PRICE+' Sparkles.');clean[it.id]={price:n,active:w.active!==false};});
+      Object.assign(load().shop,clean);save();return catalogue();
+    },
+    undo(classId,purchaseId){const p=load().purchases.find(x=>x.classId===classId&&x.purchaseId===purchaseId&&cat().valid(x.itemId));if(!p)return false;if(!p.undone){p.undone=true;p.undoneAt=new Date().toISOString();ungrant(p);save();}return true;}
   };
 })();
 
@@ -1653,6 +1744,18 @@ details.cl-card[open]>summary::before{transform:rotate(45deg)}
 #cp-root .pts-shop-price input{width:72px;padding:6px 8px}
 .pts-buys{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .pts-buy{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-size:14px;color:var(--sp-ink,#173640)}
+/* The Market (v46) */
+.pts-market .pts-shop-rows{grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))}
+.pts-mk-row{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
+.pts-mk-row:has(.pts-mk-art){grid-template-columns:48px minmax(0,1fr) auto}
+.pts-mk-art{width:48px;height:48px;object-fit:contain;border-radius:10px;background:#fff8ea}
+.pts-mk-noart{display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1.1;text-align:center;color:var(--sp-muted,#53686d)}
+.pts-mk-price{display:inline-flex;align-items:center;gap:4px;color:#c99700}
+#cp-root .pts-mk-price input{width:64px;padding:6px 8px}
+.pts-wish-pupil h4{margin:8px 0 4px}
+.pts-wish>span{flex:1 1 180px}
+.pts-wish-ready>span{color:#8a6500;font-weight:650}
+.pts-award-market{margin:6px 0 0;font-size:14px;color:var(--sp-muted,#53686d)}
 .pts-goal-dialog{width:min(100%,460px)}
 #cp-root .pts-goal-dialog input{width:100%;min-width:0;box-sizing:border-box;font-size:16px;padding:10px 12px;border:1px solid var(--sp-control,#7b897e);border-radius:var(--sp-control-radius,8px)}
 
@@ -9202,6 +9305,62 @@ var SparkadeAvatar = (function () {
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAvatar;
 
+/* SPARKADE Market catalogue (plan 9.2), shared by Code.gs, the board and the lazy layers; ES5 like the .gs files.
+ * Ids start with mk- (never PointsAvatar's); prices are the suggested ones (the Shop tab holds the teacher's). Worn and placed
+ * are rules: the newest grant per slot. A wish costs nothing; MAX_WISHES may wait at once. */
+var SparkadeMarket = (function () {
+  'use strict';
+  var WEAR_SLOTS = ['back', 'feet', 'top', 'neck', 'chest', 'face', 'head'];
+  var DORM_SLOTS = ['floor', 'bed', 'pet', 'toybox', 'shelf', 'sill', 'lamp', 'window', 'wall-left', 'wall-right', 'ceiling'];
+  var ITEMS = [
+    ['mk-cape', 'wear', 'back', 'Navy cape', 30], ['mk-star-badge', 'wear', 'chest', 'Gold star badge', 10],
+    ['mk-round-glasses', 'wear', 'face', 'Round glasses', 15], ['mk-explorer-jacket', 'wear', 'top', 'Explorer jacket', 40],
+    ['mk-festival-jacket', 'wear', 'top', 'Festival jacket', 40], ['mk-hanbok-vest', 'wear', 'top', 'Hanbok vest', 40],
+    ['mk-crown-hairpin', 'wear', 'head', 'Crown hairpin', 10], ['mk-scarf', 'wear', 'neck', 'Scarf', 15],
+    ['mk-headphones', 'wear', 'head', 'Headphones', 20], ['mk-wizard-hat', 'wear', 'head', 'Wizard hat', 25],
+    ['mk-rain-boots', 'wear', 'feet', 'Rain boots', 20], ['mk-backpack', 'wear', 'back', 'Backpack', 20],
+    ['mk-star-quilt', 'dorm', 'bed', 'Star quilt', 25], ['mk-round-rug', 'dorm', 'floor', 'Round rug', 20],
+    ['mk-striped-rug', 'dorm', 'floor', 'Striped rug', 20], ['mk-fairy-lights', 'dorm', 'ceiling', 'Fairy lights', 30],
+    ['mk-framed-drawing', 'dorm', 'wall-left', 'Framed drawing', 15], ['mk-navy-banner', 'dorm', 'wall-right', 'Navy banner', 15],
+    ['mk-plant', 'dorm', 'sill', 'Plant', 15], ['mk-lantern', 'dorm', 'lamp', 'Lantern', 20],
+    ['mk-trophy-shelf', 'dorm', 'shelf', 'Trophy shelf', 35], ['mk-curtains', 'dorm', 'window', 'Curtains', 20],
+    ['mk-pet-bed', 'dorm', 'pet', 'Pet bed', 25], ['mk-toy-chest', 'dorm', 'toybox', 'Toy chest', 25]
+  ].map(function (r) { return {id: r[0], kind: r[1], slot: r[2], name: r[3], price: r[4]}; });
+  var BY_ID = {};
+  ITEMS.forEach(function (it) { BY_ID[it.id] = it; });
+  var MAX_WISHES = 3;
+  function item(id) { var k = String(id == null ? '' : id); return Object.prototype.hasOwnProperty.call(BY_ID, k) ? BY_ID[k] : null; }
+  function valid(id) { return typeof id === 'string' && /^mk-[a-z-]{2,30}$/.test(id) && !!item(id); }
+  function stamp(at) { var t = at && typeof at.getTime === 'function' ? at.getTime() : Date.parse(String(at || '')); return isFinite(t) ? t : 0; }
+  // owned: rows {itemId, at, undone} not undone, oldest first (an id once, at its newest grant).
+  function owned(rows) {
+    var list = (rows || []).map(function (r, i) { return {r: r || {}, i: i}; }).filter(function (x) {
+      return x.r.undone !== true && String(x.r.undone).toLowerCase() !== 'true' && valid(x.r.itemId);
+    }).sort(function (a, b) { return stamp(a.r.at) - stamp(b.r.at) || a.i - b.i; });
+    var out = [];
+    list.forEach(function (x) { var at = out.indexOf(x.r.itemId); if (at >= 0) out.splice(at, 1); out.push(x.r.itemId); });
+    return out;
+  }
+  function dress(ids) {
+    var slot = {};
+    (ids || []).forEach(function (id) { var it = item(id); if (it && it.kind === 'wear') slot[it.slot] = it.id; });
+    return WEAR_SLOTS.filter(function (s) { return Object.prototype.hasOwnProperty.call(slot, s); }).map(function (s) { return slot[s]; });
+  }
+  function dorm(ids) {
+    var out = {};
+    (ids || []).forEach(function (id) { var it = item(id); if (it && it.kind === 'dorm') out[it.slot] = it.id; });
+    return out;
+  }
+  function progress(balance, price) {
+    var b = Number(balance), need = Math.max(0, Math.round(Number(price) || 0));
+    b = isFinite(b) ? Math.round(b) : 0;
+    return {have: Math.max(0, Math.min(b, need)), need: need, left: Math.max(0, need - b), ready: b >= need};
+  }
+  return {ITEMS: ITEMS, WEAR_SLOTS: WEAR_SLOTS, DORM_SLOTS: DORM_SLOTS, MAX_WISHES: MAX_WISHES,
+    item: item, valid: valid, owned: owned, dress: dress, dorm: dorm, progress: progress};
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeMarket;
+
 /* Spark Education Portal · Teaching › Points: the class board the teacher uses in class (pilot/PortalPoints.gs on the
  * server, pilot/points-core.js for the rules and drawings). Tap a pupil, pick a reason: the points show at once with a
  * sound and a hop, a level-up or a full marble jar gets a celebration with confetti, and the award saves in the background.
@@ -9216,6 +9375,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
   if (typeof PointsCore === 'undefined' || typeof PointsAvatar === 'undefined') return;
   const P = PointsCore, A = PointsAvatar, K = P.SPARKADE;
   const V = typeof SparkadeAvatar !== 'undefined' ? SparkadeAvatar : null;
+  // The Market catalogue (sparkade-market-core.js, v46), loaded before this file.
+  const MKT = typeof SparkadeMarket !== 'undefined' ? SparkadeMarket : null;
   var SP_TEACHER_ART = window.CP_PORTAL_MODE === "reportcards" ? {} : {"dragon-egg":"assets/sparkade-dragon-egg.webp","dragon-1":"https://sparkportal.kr/sparkade/art/dragon-1.webp","dragon-2":"https://sparkportal.kr/sparkade/art/dragon-2.webp","dragon-3":"assets/sparkade-dragon-3.webp","dragon-4":"https://sparkportal.kr/sparkade/art/dragon-4.webp","dragon-5":"https://sparkportal.kr/sparkade/art/dragon-5.webp","wolf-egg":"assets/sparkade-wolf-egg.webp","wolf-1":"https://sparkportal.kr/sparkade/art/wolf-1.webp","wolf-2":"https://sparkportal.kr/sparkade/art/wolf-2.webp","wolf-3":"assets/sparkade-wolf-3.webp","wolf-4":"https://sparkportal.kr/sparkade/art/wolf-4.webp","wolf-5":"https://sparkportal.kr/sparkade/art/wolf-5.webp","sunbird-egg":"assets/sparkade-sunbird-egg.webp","sunbird-1":"https://sparkportal.kr/sparkade/art/sunbird-1.webp","sunbird-2":"https://sparkportal.kr/sparkade/art/sunbird-2.webp","sunbird-3":"assets/sparkade-sunbird-3.webp","sunbird-4":"https://sparkportal.kr/sparkade/art/sunbird-4.webp","sunbird-5":"https://sparkportal.kr/sparkade/art/sunbird-5.webp","otter-egg":"assets/sparkade-otter-egg.webp","otter-1":"https://sparkportal.kr/sparkade/art/otter-1.webp","otter-2":"https://sparkportal.kr/sparkade/art/otter-2.webp","otter-3":"assets/sparkade-otter-3.webp","otter-4":"https://sparkportal.kr/sparkade/art/otter-4.webp","otter-5":"https://sparkportal.kr/sparkade/art/otter-5.webp","grove-egg":"assets/sparkade-grove-egg.webp","grove-1":"https://sparkportal.kr/sparkade/art/grove-1.webp","grove-2":"https://sparkportal.kr/sparkade/art/grove-2.webp","grove-3":"assets/sparkade-grove-3.webp","grove-4":"https://sparkportal.kr/sparkade/art/grove-4.webp","grove-5":"https://sparkportal.kr/sparkade/art/grove-5.webp"};
   const DEMO = window.CP_DEMO_MODE === true;
   const PREFS = 'cp-points-prefs-v1', SAMPLE = 'cp-points-sample-v1';
@@ -9326,13 +9487,17 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
   const SKIES = [['auto', 'Auto'], ['dawn', 'Dawn'], ['day', 'Day'], ['golden', 'Golden hour'], ['night', 'Night']];
   const WEATHERS = [['auto', 'Auto'], ['clear', 'Clear'], ['rain', 'Rain'], ['snow', 'Snow']];
   const MAX_BANNER = 160;
-  function screenDefaults() { return { banner: { text: '', on: false }, sparkles: true, crest: true, sky: 'auto', weather: 'auto', care: true, sound: true }; }
+  // v46 (plan 9.2): the 3D switch, Market at home and the King's flight, as on the server.
+  function screenDefaults() { return { banner: { text: '', on: false }, sparkles: true, crest: true, sky: 'auto', weather: 'auto', care: true, sound: true, threeD: false, market: true, flight: true }; }
+  const SCREEN_V46 = [['threeD', '3D companions'], ['market', 'Market at home'], ['flight', "King's flight"]];
+  // threeD in the server's screen means v46: only then are the new keys sent.
+  const screenV46 = c => !!(c && c.screen && typeof c.screen === 'object' && Object.prototype.hasOwnProperty.call(c.screen, 'threeD'));
   /* The class's settings as the page uses them: the server's, with the defaults for anything an older reply leaves out. */
   function screenOf(c) {
     const out = screenDefaults(), s = c && c.screen;
     if (!s || typeof s !== 'object') return out;
     if (s.banner && typeof s.banner === 'object') { if (typeof s.banner.text === 'string') out.banner.text = s.banner.text; if (typeof s.banner.on === 'boolean') out.banner.on = s.banner.on; }
-    ['sparkles', 'crest', 'care', 'sound'].forEach(k => { if (typeof s[k] === 'boolean') out[k] = s[k]; });
+    ['sparkles', 'crest', 'care', 'sound', 'threeD', 'market', 'flight'].forEach(k => { if (typeof s[k] === 'boolean') out[k] = s[k]; });
     if (SKIES.some(x => x[0] === s.sky)) out.sky = s.sky;
     if (WEATHERS.some(x => x[0] === s.weather)) out.weather = s.weather;
     return out;
@@ -9340,7 +9505,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
   /* The same checks as the server's, so the browser sample refuses what the real portal refuses. Returns the cleaned settings or throws. */
   function cleanScreen(input, base) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('The pupil screen settings are missing.');
-    const known = ['banner', 'sparkles', 'crest', 'sky', 'weather', 'care', 'sound'], out = { banner: { text: base.banner.text, on: base.banner.on }, sparkles: base.sparkles, crest: base.crest, sky: base.sky, weather: base.weather, care: base.care, sound: base.sound };
+    const known = ['banner', 'sparkles', 'crest', 'sky', 'weather', 'care', 'sound', 'threeD', 'market', 'flight'], out = { banner: { text: base.banner.text, on: base.banner.on }, sparkles: base.sparkles, crest: base.crest, sky: base.sky, weather: base.weather, care: base.care, sound: base.sound, threeD: base.threeD, market: base.market, flight: base.flight };
     Object.keys(input).forEach(k => { if (known.indexOf(k) < 0) throw new Error('The pupil screen has a setting that is not known.'); });
     if (input.banner !== undefined) {
       const b = input.banner;
@@ -9356,6 +9521,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       if (b.on !== undefined) { if (typeof b.on !== 'boolean') throw new Error('The banner is either on or off.'); out.banner.on = b.on; }
     }
     ['sparkles', 'crest', 'care', 'sound'].forEach(k => { if (input[k] === undefined) return; if (typeof input[k] !== 'boolean') throw new Error('Each choice is either on or off.'); out[k] = input[k]; });
+    SCREEN_V46.forEach(([k, label]) => { if (input[k] === undefined) return; if (typeof input[k] !== 'boolean') throw new Error(label + ' is either on or off.'); out[k] = input[k]; });
     if (input.sky !== undefined) { if (!SKIES.some(x => x[0] === input.sky)) throw new Error('Choose the sky from Auto, Dawn, Day, Golden hour or Night.'); out.sky = input.sky; }
     if (input.weather !== undefined) { if (!WEATHERS.some(x => x[0] === input.weather)) throw new Error('Choose the weather from Auto, Clear, Rain or Snow.'); out.weather = input.weather; }
     return out;
@@ -9389,19 +9555,23 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       const colour = K.validColour(c.colour) ? c.colour : (coloursOf(s.classId)[s.studentId] || 0);
       return { species: c.species, name: kind.name, state: c.state, stage: g.stage, stageName: g.stage ? kind.stages[g.stage - 1] : '', stages: kind.stages, colour, nextMark: c.state === 'pet' ? g.nextMark : null, grewLastNight: g.grewLastNight, growsTonight: g.growsTonight, tonightStage: g.tonightStage, eggAt: c.eggAt, hatchedAt: c.hatchedAt }; };
     function save() { writeJson(SAMPLE, M); }
+    // The Market lives in the sample adapter (demo-adapter.js, CP_DEMO_MARKET).
+    const MK = () => (MKT && window.CP_DEMO_MARKET && typeof window.CP_DEMO_MARKET.classOut === 'function' ? window.CP_DEMO_MARKET : null);
+    const marketOut = (c, t) => { const mk = MK(); return mk ? mk.classOut(c.classId, M.students.filter(s => s.classId === c.classId).sort((a, b) => a.order - b.order).map(s => ({ studentId: s.studentId, name: s.name, points: (t[s.studentId] || {}).points || 0, active: s.active }))) : null; };
+    const pupilOf = p => { const c = cls(p.classId); return { c, s: M.students.find(x => x.classId === c.classId && x.studentId === String(p.studentId || '') && x.active) || null }; };
     const list = classId => M.awards.filter(a => a.classId === classId).map(a => ({ studentId: a.studentId, points: a.points, at: a.at, undone: a.undone }));
     function clsOut(c) {
-      const t = P.totals(list(c.classId)), batches = {}, order = [];
+      const t = P.totals(list(c.classId)), batches = {}, order = [], mo = marketOut(c, t), spentOf = id => (mo && mo.per[id] ? mo.per[id].spent : 0);
       M.awards.filter(a => a.classId === c.classId).forEach(a => { let b = batches[a.batchId]; if (!b) { b = batches[a.batchId] = { batchId: a.batchId, at: a.at, label: a.label, icon: a.icon, points: a.points, studentIds: [], undone: a.undone }; order.push(a.batchId); } b.studentIds.push(a.studentId); });
       return { classId: c.classId, code: c.code, name: c.name, linkKey: '', link: '', password: c.password || '', teacherPassword: c.teacherPassword || '', screen: screenOf(c), goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) },
-        students: M.students.filter(s => s.classId === c.classId).sort((a, b) => a.order - b.order).map(s => ({ studentId: s.studentId, name: s.name, pin: s.pin, creature: s.creature, active: s.active, order: s.order, points: (t[s.studentId] || {}).points || 0, peak: (t[s.studentId] || {}).peak || 0, balance: (t[s.studentId] || {}).points || 0, look: s.look || A.startFor(s.studentId), avatarV2: s.avatarV2 || null, wear: s.wear || '', pet: s.pet || null, spent: 0, made: false, things: 0, companion: companionOut(s) })),
-        recent: order.slice(-30).reverse().map(id => batches[id]), buys: [], quests: (M.quests || []).filter(q => q.classId === c.classId && q.active), claims: [] };
+        students: M.students.filter(s => s.classId === c.classId).sort((a, b) => a.order - b.order).map(s => ({ studentId: s.studentId, name: s.name, pin: s.pin, creature: s.creature, active: s.active, order: s.order, points: (t[s.studentId] || {}).points || 0, peak: (t[s.studentId] || {}).peak || 0, balance: ((t[s.studentId] || {}).points || 0) - spentOf(s.studentId), look: s.look || A.startFor(s.studentId), avatarV2: s.avatarV2 || null, wear: s.wear || '', pet: s.pet || null, spent: spentOf(s.studentId), made: false, things: 0, companion: companionOut(s), market: mo && mo.per[s.studentId] ? mo.per[s.studentId].market : undefined })),
+        wishes: mo ? mo.wishes : undefined, recent: order.slice(-30).reverse().map(id => batches[id]), buys: mo ? mo.buys.slice().sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40) : [], quests: (M.quests || []).filter(q => q.classId === c.classId && q.active), claims: [] };
     }
     const cls = id => { const c = M.classes.find(x => x.classId === id && x.active); if (!c) throw new Error('This class is not in Points any more. Choose another class.'); return c; };
     function totalsOut(c) { const t = P.totals(list(c.classId)), out = {}; M.students.filter(s => s.classId === c.classId).forEach(s => { out[s.studentId] = { points: (t[s.studentId] || {}).points || 0, peak: (t[s.studentId] || {}).peak || 0 }; }); return { totals: out, goal: { name: c.goalName, target: c.goalTarget, start: c.goalStart, progress: P.goalProgress(list(c.classId), c.goalStart) } }; }
     const later = value => new Promise(resolve => setTimeout(() => resolve(JSON.parse(JSON.stringify(value))), 140));
     return {
-      data(classId) { load(); const active = M.classes.filter(c => c.active); const c = classId ? cls(classId) : active[0]; return later({ ok: true, ready: true, url: '', classes: active.map(x => ({ classId: x.classId, code: x.code, name: x.name, students: M.students.filter(s => s.classId === x.classId && s.active).length })), shop: M.shop, behaviours: M.behaviours.slice().sort((a, b) => a.order - b.order), cls: c ? clsOut(c) : null }); },
+      data(classId) { load(); const active = M.classes.filter(c => c.active); const c = classId ? cls(classId) : active[0]; return later({ ok: true, ready: true, url: '', classes: active.map(x => ({ classId: x.classId, code: x.code, name: x.name, students: M.students.filter(s => s.classId === x.classId && s.active).length })), shop: M.shop, market: MK() ? MK().catalogue() : undefined, behaviours: M.behaviours.slice().sort((a, b) => a.order - b.order), cls: c ? clsOut(c) : null }); },
       setup() { load(); return later({ ok: true, created: false, url: '' }); },
       saveClass(p) { load(); const code = String(p.code || '').trim(); if (!/^[0-9A-Za-z][0-9A-Za-z -]{0,15}$/.test(code)) return Promise.reject(new Error('Type the class code, for example 5-4CT1.')); let c = p.classId ? cls(p.classId) : null; if (M.classes.some(x => x !== c && x.active && x.code.toLowerCase() === code.toLowerCase())) return Promise.reject(new Error(code + ' is already in Points.')); const password = p.password === undefined || p.password === null ? undefined : String(p.password).trim(); if (password !== undefined && password !== '' && !(password.length >= 6 && password.length <= 24)) return Promise.reject(new Error('The class password needs 6 to 24 characters.')); const teacherPassword = p.teacherPassword === undefined || p.teacherPassword === null ? undefined : String(p.teacherPassword).trim(); if (teacherPassword !== undefined && teacherPassword !== '' && !(teacherPassword.length >= 6 && teacherPassword.length <= 24)) return Promise.reject(new Error('The teacher password needs 6 to 24 characters.')); const tk = teacherPassword !== undefined ? teacherPassword : c ? c.teacherPassword || '' : '', pk = password !== undefined ? password : c ? c.password || '' : ''; if (tk && pk && tk === pk) return Promise.reject(new Error('The teacher password must be different from the class password.')); if (!c) { c = { classId: newId(), code, name: p.name || '', linkKey: '', password: password || '', teacherPassword: teacherPassword || '', goalName: p.goalName || 'Class party', goalTarget: Number(p.goalTarget) >= 5 ? Number(p.goalTarget) : 300, goalStart: new Date().toISOString(), active: true }; M.classes.push(c); } else { c.code = code; c.name = p.name || ''; if (password !== undefined) c.password = password; if (teacherPassword !== undefined) c.teacherPassword = teacherPassword; if (p.archive === true) c.active = false; } save(); return later({ ok: true, classId: c.classId }); },
       newGoal(p) { load(); const c = cls(p.classId), t = Math.floor(Number(p.goalTarget)); if (!String(p.goalName || '').trim()) return Promise.reject(new Error('Name the prize, for example Movie day.')); if (!(t >= 5 && t <= 100000)) return Promise.reject(new Error('The class goal needs a number of points from 5 to 100000.')); c.goalName = String(p.goalName).trim().slice(0, 40); c.goalTarget = t; c.goalStart = new Date().toISOString(); save(); return later({ ok: true, goal: { name: c.goalName, target: t, start: c.goalStart, progress: 0 } }); },
@@ -9415,8 +9585,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       saveBehaviour(p) { load(); const label = String(p.label || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40), n = Math.round(Number(p.points)); if (!label) return Promise.reject(new Error('This needs a name.')); if (!(n >= -5 && n <= 5) || n === 0) return Promise.reject(new Error('“' + label + '” needs Sparkles from −5 to +5 (not 0).')); if (M.behaviours.some(b => b.active && b.behaviourId !== p.behaviourId && b.label.toLowerCase() === label.toLowerCase() && (b.points > 0) === (n > 0))) return Promise.reject(new Error('There is already a button called “' + label + '”.'));
         let b = p.behaviourId && M.behaviours.find(x => x.behaviourId === p.behaviourId && x.active); if (p.behaviourId && !b) return Promise.reject(new Error('This button was changed in another window. Reload Points and try again.')); if (!b) { b = { behaviourId: newId(), order: M.behaviours.length, active: true }; M.behaviours.push(b); } Object.assign(b, { label, points: n, icon: P.validIcon(p.icon) ? p.icon : '⭐' }); save(); return later({ ok: true, behaviourId: b.behaviourId, behaviours: M.behaviours.slice().sort((a, x) => a.order - x.order) }); },
       removeBehaviour(p) { load(); const b = M.behaviours.find(x => x.behaviourId === p.behaviourId); if (b) b.active = false; save(); return later({ ok: true, behaviours: M.behaviours.slice().sort((a, x) => a.order - x.order) }); },
-      saveShop(p) { load(); for (const w of p.items || []) { const x = M.shop.find(i => i.id === w.itemId), n = Math.round(Number(w.price)); if (!x) return Promise.reject(new Error('An item in the shop is not known. Reload Points.')); if (String(w.price).trim() === '' || !(n >= 0 && n <= 1000)) return Promise.reject(new Error(x.name + ' needs a price from 0 to 1000 Sparkles.')); x.price = n; x.active = w.active !== false; } save(); return later({ ok: true, shop: M.shop }); },
-      refund() { return later({ ok: true }); },
+      saveShop(p) { load(); const market = (p.items || []).filter(w => /^mk-/.test(String(w.itemId || '')));
+        if (market.length) { if (!MK()) return Promise.reject(new Error('An item in the shop is not known. Reload Points.')); try { MK().saveShop(market); } catch (e) { return Promise.reject(e); } }
+        for (const w of (p.items || []).filter(x => market.indexOf(x) < 0)) { const x = M.shop.find(i => i.id === w.itemId), n = Math.round(Number(w.price)); if (!x) return Promise.reject(new Error('An item in the shop is not known. Reload Points.')); if (String(w.price).trim() === '' || !(n >= 0 && n <= 1000)) return Promise.reject(new Error(x.name + ' needs a price from 0 to 1000 Sparkles.')); x.price = n; x.active = w.active !== false; } save(); return later({ ok: true, shop: M.shop, market: MK() ? MK().catalogue() : undefined }); },
+      refund(p) { load(); if (MK()) MK().undo(cls(p.classId).classId, String(p.purchaseId || '')); return later({ ok: true }); },
+      grant(p) { load(); if (!MK()) return Promise.reject(new Error('This action is not available. No academy record has been changed.')); try { const { c, s } = pupilOf(p); return later(MK().grant(p, { pupil: s, points: s ? (P.totals(list(c.classId))[s.studentId] || {}).points || 0 : 0 })); } catch (e) { return Promise.reject(e); } },
+      wish(p) { load(); if (!MK()) return later({ ok: false, reason: 'closed' }); try { const { c, s } = pupilOf(p); return later(MK().wish(p, { pupil: s, market: screenOf(c).market })); } catch (e) { return Promise.reject(e); } },
       saveBehaviours(p) { load(); const wanted = p.behaviours || []; for (const w of wanted) { if (!String(w.label || '').trim()) return Promise.reject(new Error('Every button needs words.')); const n = Math.round(Number(w.points)); if (!(n >= -5 && n <= 5) || n === 0) return Promise.reject(new Error('“' + w.label + '” needs points from −5 to +5 (not 0).')); }
         const keep = new Set(); wanted.forEach((w, i) => { let b = w.behaviourId && M.behaviours.find(x => x.behaviourId === w.behaviourId); if (!b) { b = { behaviourId: newId() }; M.behaviours.push(b); } Object.assign(b, { label: String(w.label).trim().slice(0, 40), points: Math.round(Number(w.points)), icon: P.validIcon(w.icon) ? w.icon : '⭐', order: i, active: true }); keep.add(b.behaviourId); }); M.behaviours.forEach(b => { if (!keep.has(b.behaviourId)) b.active = false; }); save(); return later({ ok: true, behaviours: M.behaviours.slice().sort((a, x) => a.order - x.order) }); },
       award(p) { load(); const c = cls(p.classId), saved = [], skipped = []; for (const batch of p.awards) { if (M.awards.some(a => a.batchId === batch.batchId)) { skipped.push(batch.batchId); continue; } const b = M.behaviours.find(x => x.behaviourId === batch.behaviourId && x.active); if (!b) return Promise.reject(new Error('A button was changed. Reload Points and give those points again.')); const at = new Date().toISOString(); [...new Set(batch.studentIds)].forEach(id => { if (M.students.some(s => s.studentId === id && s.classId === c.classId && s.active)) M.awards.push({ batchId: batch.batchId, at, classId: c.classId, studentId: id, behaviourId: b.behaviourId, label: b.label, icon: b.icon, points: b.points, undone: false }); }); saved.push(batch.batchId); } save(); return later(Object.assign({ ok: true, saved, skipped }, totalsOut(c))); },
@@ -9436,10 +9610,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
         if (!value) return Promise.reject(new Error('Choose a valid SPARKADE avatar.'));
         s.avatarV2 = value; save(); return later({ ok: true, studentId: s.studentId, avatarV2: value }); },
       saveScreen(p) { load(); const c = cls(p.classId); let screen; try { screen = cleanScreen(p.screen, screenOf(c)); } catch (e) { return Promise.reject(e); } c.screen = screen; save(); return later({ ok: true, classId: c.classId, screen }); },
-      undo(p) { load(); const c = cls(p.classId); let found = 0; M.awards.forEach(a => { if (a.batchId === p.batchId && a.classId === c.classId) { found++; a.undone = true; } }); save(); return later(Object.assign({ ok: true, found: found > 0 }, totalsOut(c))); }
+      undo(p) { load(); const c = cls(p.classId); let found = 0; M.awards.forEach(a => { if (a.batchId === p.batchId && a.classId === c.classId) { found++; a.undone = true; } }); save();
+        if (!found && /^g/.test(String(p.batchId || '')) && MK() && MK().undo(c.classId, String(p.batchId))) return later(Object.assign({ ok: true, found: true, kind: 'grant' }, totalsOut(c)));
+        return later(Object.assign({ ok: true, found: found > 0 }, totalsOut(c))); }
     };
   })();
-  const call = (name, payload) => DEMO ? sample[name](name === 'data' ? (payload || '') : (payload || {})) : rpc({ data: 'portalPointsData', setup: 'portalPointsSetup', saveClass: 'portalPointsSaveClass', newGoal: 'portalPointsNewGoal', saveStudents: 'portalPointsSaveStudents', resetPin: 'portalPointsResetPin', newLink: 'portalPointsNewLink', clearPauses: 'portalPointsClearPauses', saveBehaviours: 'portalPointsSaveBehaviours', saveBehaviour: 'portalPointsSaveBehaviour', removeBehaviour: 'portalPointsRemoveBehaviour', saveShop: 'portalPointsSaveShop', refund: 'portalPointsRefund', saveQuest: 'portalPointsSaveQuest', removeQuest: 'portalPointsRemoveQuest', decideClaims: 'portalPointsDecideClaims', award: 'portalPointsAward', undo: 'portalPointsUndo', giveEgg: 'portalPointsGiveEgg', hatch: 'portalPointsHatch', saveAvatar: 'portalPointsSaveAvatar', saveScreen: 'portalPointsSaveScreen' }[name], name === 'data' ? { classId: payload || '' } : payload || {});
+  const call = (name, payload) => DEMO ? sample[name](name === 'data' ? (payload || '') : (payload || {})) : rpc({ data: 'portalPointsData', setup: 'portalPointsSetup', saveClass: 'portalPointsSaveClass', newGoal: 'portalPointsNewGoal', saveStudents: 'portalPointsSaveStudents', resetPin: 'portalPointsResetPin', newLink: 'portalPointsNewLink', clearPauses: 'portalPointsClearPauses', saveBehaviours: 'portalPointsSaveBehaviours', saveBehaviour: 'portalPointsSaveBehaviour', removeBehaviour: 'portalPointsRemoveBehaviour', saveShop: 'portalPointsSaveShop', refund: 'portalPointsRefund', saveQuest: 'portalPointsSaveQuest', removeQuest: 'portalPointsRemoveQuest', decideClaims: 'portalPointsDecideClaims', award: 'portalPointsAward', undo: 'portalPointsUndo', giveEgg: 'portalPointsGiveEgg', hatch: 'portalPointsHatch', saveAvatar: 'portalPointsSaveAvatar', saveScreen: 'portalPointsSaveScreen', grant: 'portalPointsGrant' }[name], name === 'data' ? { classId: payload || '' } : payload || {});
 
   /* ---------- the model: what the sheet has confirmed, plus the awards still on their way ---------- */
   const cls = () => S.data && S.data.cls;
@@ -9860,6 +10036,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
         one ? h('span', { class: 'pts-award-art', html: avatar(one, 'aw') }) : null,
         h('div', null, h('p', { class: 'pts-award-who', text: title }), one ? h('p', { class: 'pts-award-now', text: P.sparks(balanceOf(one, t)) + ' to spend' }) : h('p', { class: 'pts-award-now', text: students.map(s => s.name).join(', ') })),
         h('button', { type: 'button', class: 'pts-x', 'aria-label': 'Close', onclick: close }, '×')),
+      one ? marketOwned(one) : null,
       panel,
       one && V ? h('div', { class: 'pts-avatar-link' }, h('button', { type: 'button', class: 'cp-secondary', onclick: () => { close(); openAvatar(one); } }, 'Design avatar')) : null);
     const layer = h('div', { class: 'pts-layer', onclick: e => { if (e.target === layer) close(); } }, dialog);
@@ -10049,7 +10226,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
   /* ---------- the Pupil screen dialog ---------- */
   function openScreen() {
     const c = cls(); if (!c) return;
-    const back = document.activeElement, classId = c.classId, cur = screenOf(c), st = { on: cur.banner.on, busy: false };
+    const back = document.activeElement, classId = c.classId, cur = screenOf(c), st = { on: cur.banner.on, busy: false }, v46 = screenV46(c);
     const close = () => { layer.remove(); document.removeEventListener('keydown', onKey, true); if (back && back.isConnected) focusQuietly(back); };
     const msg = h('p', { class: 'pts-msg', role: 'status', text: '' });
     const banner = h('textarea', { id: 'pts-screen-banner', rows: '3', maxlength: String(MAX_BANNER), spellcheck: 'false', autocomplete: 'off', placeholder: 'For example: Well done, ' + (c.name || c.code) + '! Keep reading every day.' });
@@ -10080,6 +10257,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       h('div', { class: 'pts-screen-pair' }, sky.field, weather.field),
       check('care', 'Care at home', 'Pupils can pet, water, feed and walk their companion in My room.'),
       check('sound', 'Sound on pupils’ screens', 'The starting choice only. Pupils still tap to turn sound on.'),
+      // v46 servers only.
+      v46 ? check('threeD', '3D companions', 'In 3D where the screen can draw it; pictures elsewhere.') : null,
+      v46 ? check('market', 'Market at home', 'Pupils wish at home for free; you give in class.') : null,
+      v46 ? check('flight', 'King’s flight at milestones', 'At each class milestone. Off: fireworks.') : null,
       growthBlock(c));
     const save = () => {
       if (st.busy) return;
@@ -10088,6 +10269,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
       if (text.length > MAX_BANNER) { msg.textContent = 'The banner can be up to ' + MAX_BANNER + ' characters.'; focusQuietly(banner); return; }
       if (st.on && !text) { msg.textContent = 'Type the banner words first, or switch the banner off.'; focusQuietly(banner); return; }
       const screen = { banner: { text, on: st.on }, sparkles: !!boxes.sparkles.checked, crest: !!boxes.crest.checked, sky: sky.select.value, weather: weather.select.value, care: !!boxes.care.checked, sound: !!boxes.sound.checked };
+      if (v46) SCREEN_V46.forEach(([k]) => { screen[k] = !!boxes[k].checked; });
       st.busy = true; saveBtn.disabled = true; msg.textContent = 'Saving…';
       Promise.resolve(call('saveScreen', { classId, screen })).then(r => {
         if (!r || r.ok !== true || !r.screen) { const error = new Error('The portal did not confirm this save.'); error.outcomeUnknown = true; throw error; }
@@ -10270,9 +10452,82 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
           h('p', { class: 'pts-help', text: 'Pupils open this link at home, tap their name and type their PIN. They see classmates’ avatars and ' + P.CURRENCY.many + ' in name order, their companion, and their own history.' }),
           h('label', { class: 'cl-field', for: 'pts-link' }, h('span', { text: 'Link for ' + (c.name || c.code) }), linkBox), h('div', { class: 'cp-actions' }, copy, slips, renew)),
         h('section', { class: 'pts-panel' }, h('h3', { text: 'Your points and minus points' }), h('p', { class: 'pts-help', text: 'The same for every class. Tap one to change or delete it. You can also add them in the points window (tap a pupil, then ✎ Edit). Changing one never changes ' + P.CURRENCY.many + ' already given.' }), buttonsPanel({})),
-        shopPanel(c)),
+        wishesPanel(c), marketPanel(), shopPanel(c)),
       msg);
     drawRows();
+  }
+  /* ---------- the Market (v46, plan 9.7): prices for every class, wishes per pupil in name order (never ranked), Give,
+   * and Not now (this device only) ---------- */
+  const marketName = id => { const it = MKT && MKT.item(id); return it ? it.name : String(id); };
+  // Pictures: window.SP_MARKET_ART (id → file) on the static site only; the hosted page shows names.
+  function marketArt(id) {
+    const map = window.SP_MARKET_ART;
+    if (!map || typeof map !== 'object') return null;
+    const src = Object.prototype.hasOwnProperty.call(map, id) ? map[id] : '';
+    return typeof src === 'string' && /^(?:https:\/\/sparkportal\.kr\/sparkade\/|\/sparkade\/|(?:\.\/)?)(?:wear|dorm)\/[a-z0-9-]+\.webp$/.test(src) ? src : '';
+  }
+  function marketOwned(s) {
+    const owned = s.market && Array.isArray(s.market.owned) ? s.market.owned : [];
+    return owned.length ? h('p', { class: 'pts-award-market', text: 'From the Market: ' + owned.map(marketName).join(', ') }) : null;
+  }
+  function marketPanel() {
+    if (!MKT || !Array.isArray(S.data.market)) return null; // a version 45 server has no Market
+    const items = S.data.market.map(x => Object.assign({}, x)), msg = h('p', { class: 'pts-msg', role: 'status' }), pictures = !!(window.SP_MARKET_ART && typeof window.SP_MARKET_ART === 'object');
+    const row = x => {
+      const price = h('input', { type: 'number', min: '0', max: '1000', step: '5', inputmode: 'numeric', value: String(x.price), 'aria-label': 'Price of ' + x.name + ' in ' + P.CURRENCY.many, oninput: e => { x.price = e.target.value; } });
+      const set = n => { x.price = Math.max(0, Math.min(1000, n)); price.value = String(x.price); };
+      const step = d => () => set((Math.round(Number(price.value)) || 0) + d);
+      const src = pictures ? marketArt(x.id) : null;
+      const r = h('div', { class: 'pts-shop-row pts-mk-row' + (x.active ? '' : ' pts-off'), 'data-mk': x.id },
+        src === null ? null : src ? h('img', { class: 'pts-mk-art', src, alt: '', loading: 'lazy', decoding: 'async' }) : h('span', { class: 'pts-mk-art pts-mk-noart', text: 'No picture yet' }),
+        h('span', { class: 'pts-shop-name', text: x.name }),
+        h('span', { class: 'pts-mk-price' }, h('button', { type: 'button', class: 'cp-secondary pts-small', 'aria-label': '5 fewer for ' + x.name, onclick: step(-5) }, '−'), price, h('button', { type: 'button', class: 'cp-secondary pts-small', 'aria-label': '5 more for ' + x.name, onclick: step(5) }, '+'), h('span', { 'aria-hidden': 'true', text: '✦' })),
+        h('label', { class: 'pts-check' }, h('input', { type: 'checkbox', checked: x.active ? true : null, onchange: e => { x.active = e.target.checked; r.classList.toggle('pts-off', !x.active); } }), h('span', { text: 'In the Market' })),
+        h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => set(x.suggested) }, 'Back to suggested'));
+      return r;
+    };
+    const group = (kind, title) => h('div', { class: 'pts-shop-group' }, h('h4', { text: title }), h('div', { class: 'pts-shop-rows' }, items.filter(x => x.kind === kind).map(row)));
+    const save = h('button', { type: 'button', class: 'cp-primary', onclick: () => {
+      const bad = items.find(x => String(x.price).trim() === '' || !(Math.round(Number(x.price)) >= 0 && Math.round(Number(x.price)) <= 1000));
+      if (bad) { msg.textContent = bad.name + ' needs a price from 0 to 1000 ' + P.CURRENCY.many + '.'; return; }
+      save.disabled = true; msg.textContent = 'Saving the prices…';
+      Promise.resolve(call('saveShop', { items: items.map(x => ({ itemId: x.id, price: Math.round(Number(x.price)), active: x.active })) })).then(r => {
+        save.disabled = false; if (r && Array.isArray(r.market)) S.data.market = r.market; if (r && r.shop) S.data.shop = r.shop;
+        msg.textContent = 'Prices saved. Pupils see them the next time they open the Market.';
+      }).catch(e => { save.disabled = false; msg.textContent = saveFailureText(e); });
+    } }, 'Save prices');
+    return h('section', { class: 'pts-panel pts-shop pts-market' }, h('h3', { text: 'The Market' }),
+      h('p', { class: 'pts-help', text: 'What pupils can wish for at home. The prices are the same for every class. Wishes cost nothing; you give them in class.' }),
+      h('details', { class: 'pts-shop-more' }, h('summary', { text: 'Prices and what is in the Market' }), group('wear', 'Wear'), group('dorm', 'My room'), h('div', { class: 'cp-actions' }, save), msg));
+  }
+  function wishesPanel(c) {
+    if (!MKT || !Array.isArray(c.wishes)) return null;
+    const key = 'spark-notnow-' + (c.linkKey || c.classId), hidden = new Set((readJson(key) || []).filter(x => typeof x === 'string'));
+    const msg = h('p', { class: 'pts-msg', role: 'status' }), body = h('div', { class: 'pts-wish-list' });
+    const draw = () => {
+      const t = shown().totals, shownList = c.wishes.filter(w => !hidden.has(w.wishId)), pupils = P.byName(c.students.filter(s => s.active && shownList.some(w => w.studentId === s.studentId)));
+      body.replaceChildren(...(pupils.length ? pupils.map(s => {
+        const balance = balanceOf(s, t);
+        return h('div', { class: 'pts-wish-pupil' }, h('h4', { text: s.name }), h('ul', { class: 'pts-buys' }, shownList.filter(w => w.studentId === s.studentId).map(w => {
+          const g = MKT.progress(balance, w.price), name = marketName(w.itemId);
+          const give = h('button', { type: 'button', class: 'cp-primary pts-small', disabled: g.ready ? null : true, onclick: () => {
+            give.disabled = true; msg.textContent = 'Giving ' + s.name + ' the ' + name + '…';
+            Promise.resolve(call('grant', { classId: c.classId, studentId: s.studentId, itemId: w.itemId, grantId: 'g' + newId() })).then(r => {
+              if (r && r.ok) { S.message = 'Gave ' + s.name + ' the ' + name + '.'; load({ keepView: true }); return; }
+              give.disabled = false;
+              const reason = r && r.reason;
+              msg.textContent = reason === 'sparkles' ? s.name + ' is saving up: ' + Math.max(0, (Number(r.price) || 0) - (Number(r.balance) || 0)) + ' more ✦' : reason === 'owned' ? s.name + ' has it already.' : reason === 'off' ? 'Turn it on in the Market first.' : 'Not saved. Try again in a moment.';
+            }).catch(e => { give.disabled = false; msg.textContent = saveFailureText(e); });
+          } }, 'Give');
+          const notNow = h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => { hidden.add(w.wishId); writeJson(key, [...hidden].slice(-200)); draw(); } }, 'Not now');
+          return h('li', { class: 'pts-buy pts-wish' + (g.ready ? ' pts-wish-ready' : '') }, h('span', { text: name + ' · ' + g.have + ' of ' + g.need + (g.ready ? ' · ready' : ' · ' + g.left + ' to go') }), give, notNow);
+        })));
+      }) : [h('p', { class: 'pts-help', text: 'No wishes waiting in ' + (c.name || c.code) + '.' })]).concat(
+      hidden.size ? [h('button', { type: 'button', class: 'cp-secondary pts-small', onclick: () => { hidden.clear(); writeJson(key, []); draw(); } }, 'Show the wishes hidden here')] : []));
+    };
+    draw();
+    return h('section', { class: 'pts-panel pts-wishes' }, h('h3', { text: 'Wishes' }),
+      h('p', { class: 'pts-help', text: 'Wished for at home. Give takes the price; Give back returns it. Not now hides it on this device.' }), body, msg);
   }
   /* The shop: the same for every class. Prices and what is in it; what pupils bought lately, with Give back. */
   function shopThumb(x, i) {
@@ -10303,7 +10558,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = SparkadeAv
         if (give.dataset.sure !== '1') { give.dataset.sure = '1'; give.textContent = 'Yes, give back'; return; }
         give.disabled = true; Promise.resolve(call('refund', { classId: c.classId, purchaseId: b.purchaseId })).then(() => { S.message = (names[b.studentId] || 'The pupil') + ' got ' + P.sparks(b.price) + ' back for the ' + b.name + '.'; load({ keepView: true }); }).catch(e => { give.disabled = false; msg.textContent = String(e.message || e); });
       } }, 'Give back');
-      return h('li', { class: 'pts-buy' }, h('span', { text: (names[b.studentId] || '?') + ' bought ' + b.name + ' · ' + P.sparks(b.price) + ' · ' + fmtDay(b.at) }), give);
+      const gift = /^mk-/.test(String(b.itemId || ''));
+      return h('li', { class: 'pts-buy' + (gift ? ' pts-buy-gift' : '') }, h('span', { text: (names[b.studentId] || '?') + (gift ? ' was given the ' : ' bought ') + b.name + ' · ' + P.sparks(b.price) + ' · ' + fmtDay(b.at) }), give);
     })) : h('p', { class: 'pts-help', text: 'Nothing bought in ' + (c.name || c.code) + ' yet.' });
     return h('section', { class: 'pts-panel pts-shop' }, h('h3', { text: 'The shop' }),
       h('p', { class: 'pts-help', text: 'These settings preserve the previous shop and its purchases. Pupils cannot buy from it at home. SPARKADE companions are chosen and hatched with you in class.' }),

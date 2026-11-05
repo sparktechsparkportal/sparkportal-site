@@ -91,3 +91,34 @@
   [data-sp-teach] .world .crest-text b::after{display:block;margin:4px 0 0;font-size:var(--fs-1)}
 }
 @media(prefers-reduced-motion:reduce){[data-sp-teach] .world-backdrop,.sp-trb,.sp-tmore,.sp-tcap,.sp-tundo,.sp-tdim,.sp-tghost{transition:none!important;animation:none!important}.sp-tghost{display:none}}
+
+/* Phase 2 (version 46, static page only): the gift button beside Manage with a gold badge (READY wishes only), the
+   "Ready to give" sheet's big cards, and one pupil's wishes under the ring. */
+.sp-qb-gift{right:calc(max(48px,env(safe-area-inset-right,0px)) + 104px);top:max(36px,env(safe-area-inset-top,0px))}
+.sp-qb-gift .sp-qb-disc{position:relative}
+.sp-qb .sp-qb-badge{position:absolute;right:-6px;top:-6px;min-width:30px;height:30px;padding:0 8px;border-radius:999px;display:grid;place-items:center;background:var(--gold-fill);border:1px solid var(--gold-edge);color:#1A2550;font:900 var(--fs-2)/1 var(--text);text-shadow:none;box-shadow:0 3px 0 var(--gold-press)}
+.sp-tgifts{display:grid;gap:12px}
+.sp-tgift{display:grid;grid-template-columns:72px 72px 1fr;grid-template-rows:auto auto;align-items:center;gap:8px 14px;padding:12px;border-radius:20px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06)}
+.sp-tgift-face,.sp-tgift-item{grid-row:1;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:rgba(8,14,36,.6);border:2px solid var(--glass-edge);color:var(--cream);font:900 var(--fs-4)/1 var(--text)}
+.sp-tgift-face{position:relative}
+.sp-tgift-face img{position:absolute;left:50%;top:-2%;width:260%;max-width:none;transform:translateX(-50%)}
+.sp-tgift-crouch img{top:-44%}
+.sp-tgift-item{background:radial-gradient(circle at 50% 40%,#fff7e0,#f3dfae);border-color:var(--gold-edge);color:#c99a2e}
+.sp-tgift-item img{width:84%;height:84%;object-fit:contain}
+.sp-tgift-item .sp-ti{width:36px;height:36px;fill:currentColor}
+.sp-tgift-text{grid-row:1;display:flex;flex-direction:column;gap:2px;min-width:0;font:800 var(--fs-2)/1.25 var(--text);color:var(--cream)}
+.sp-tgift-text b{font-size:var(--fs-3);color:#fff}
+.sp-tgift-price{color:var(--star)}
+.sp-tgift-give{grid-column:1/3;grid-row:2;min-height:48px}
+.sp-tgift-not{grid-column:3;grid-row:2;justify-self:start}
+.sp-twish{position:absolute;z-index:20;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;padding:10px 16px;border-radius:18px;background:rgba(8,14,36,.78);border:1px solid rgba(255,255,255,.16);
+  color:var(--cream);font:800 var(--fs-2)/1.2 var(--text);white-space:nowrap;animation:sp-tfade .3s ease-out both;pointer-events:none}
+.sp-twish b{font-weight:900;color:#fff}
+.sp-twish-i{display:flex;align-items:center;gap:10px}
+.sp-twish-i i{flex:none;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle,rgba(8,14,36,1) 0 52%,transparent 54%),conic-gradient(var(--star) var(--p,0%),rgba(255,255,255,.18) 0)}
+@media(max-width:640px),(max-width:1100px) and (orientation:portrait){
+  .sp-qb-gift{right:max(14px,env(safe-area-inset-right,0px));top:calc(max(14px,env(safe-area-inset-top,0px)) + 92px)}
+  .sp-qb-gift .sp-qb-disc{width:60px;height:60px}
+  .sp-tgift{grid-template-columns:60px 60px 1fr}
+  .sp-tgift-face,.sp-tgift-item{width:60px;height:60px}
+}

@@ -692,6 +692,15 @@ out[p.studentId] = {species: c.species, stage: Math.min(5, Math.max(1, Math.floo
 });
 return out;
 }
+var ACTORS = {king: ['idle', 'wave', 'point', 'bow'], 'royal-dragon': ['idle', 'smoke']};
+function actorWant(attr, list, base, failed) {
+var m = /^([a-z][a-z-]*) ([a-z]+)$/.exec(String(attr || '').trim());
+if (!m || !Object.prototype.hasOwnProperty.call(ACTORS, m[1]) || !Array.isArray(list) || list.indexOf(m[1]) < 0) return null;
+var dir = typeof base === 'string' && /^[A-Za-z0-9._~\/:-]*$/.test(base) ? base : 'models/', url = dir + m[1] + '.glb';
+if (failed && failed[url]) return null;
+return {name: m[1], clip: ACTORS[m[1]].indexOf(m[2]) >= 0 ? m[2] : 'idle', url: url};
+}
+function actorHeading(name, yaw) { var y = Number(yaw); return name === 'king' ? (isFinite(y) && String(yaw) !== '' && yaw != null ? Math.max(-1, Math.min(1, y)) * 0.9 : -0.45) : -0.3; }
 function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
 function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
 function cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
@@ -820,7 +829,7 @@ function hash(s) { var h = 2166136261; s = String(s); for (var i = 0; i < s.leng
 var pure = {VERSION: VERSION, SPECIES: SPECIES, CAM: CAM, PLATE: PLATE, FEET: FEET, FILL: FILL, LOAD_MS: LOAD_MS, MIN_FPS: MIN_FPS, SLOW_S: SLOW_S, STAGE_SCALE: STAGE_SCALE,
 THREE_URL: THREE_URL, param: param, modelUrl: modelUrl, wanted: wanted, camera: camera, toPlate: toPlate, toFloor: toFloor, plateRect: plateRect, fit: fit,
 FpsGuard: FpsGuard, colourMatrix: colourMatrix, restFor: restFor, roomWant: roomWant, ROOM_CAM: ROOM_CAM, roomCam: roomCam,
-smokeOff: smokeOff, off: off, restAll: restAll, dropC: dropC, eatStep: eatStep, careTypes: careTypes, eatChoice: eatChoice, roomDecision: roomDecision};
+smokeOff: smokeOff, off: off, ACTORS: ACTORS, actorWant: actorWant, actorHeading: actorHeading, restAll: restAll, dropC: dropC, eatStep: eatStep, careTypes: careTypes, eatChoice: eatChoice, roomDecision: roomDecision};
 if (!win) return pure;
 
 var doc = win.document, SELF = doc.currentScript && doc.currentScript.src || '';
@@ -864,7 +873,7 @@ var search = String(win.location && win.location.search || ''), base = 'models/'
 var list = Array.isArray(files.models) ? files.models.filter(function (n) { return typeof n === 'string' && /^[a-z0-9-]+$/.test(n); }) : [];
 var debug = param(search, '3ddebug') === '1', guardOn = param(search, '3dguard') !== '0', still = reducedMotion();
 var L = {dead: false, ready: false, reason: '', creatures: {}, assets: {}, failed: {}, seenStage: {}, first: true, raf: 0, timer: 0, frames: 0, fps: null,
-guard: new FpsGuard(MIN_FPS, SLOW_S), queued: false, errors: []};
+guard: new FpsGuard(MIN_FPS, SLOW_S), queued: false, errors: [], actors: {}};
 var T, M, B, renderer, scene3, cam, roomCam3, canvas, style, ramp, glowTex, starTex, smokeTex, observer, roomObserver, last = 0, clock = 0;
 
 function kill(reason) {
@@ -877,6 +886,7 @@ if (roomObserver) roomObserver.disconnect();
 host.removeEventListener('pointerdown', onTap, true);
 doc.removeEventListener('click', onCareTap, true);
 Object.keys(L.creatures).forEach(drop);
+Object.keys(L.actors).forEach(dropActor);
 if (L.room) { dropC(L.room); L.room = null; }
 if (style && style.parentNode) style.parentNode.removeChild(style);
 if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
@@ -1041,11 +1051,66 @@ eatNow(c, eatChoice({rise: !L.first && c.mood !== 'great' && w.mood === 'great',
 c.mood = w.mood; c.rest = restFor(w.mood, sky);
 });
 (snap.students || []).forEach(function (p) { L.seenStage[p.studentId] = p.companion ? p.companion.stage : null; });
+actorSync();
 L.first = false;
 roomSync();
 hide();
 if (canvas && el && !L.room && canvas.parentNode !== el) el.appendChild(canvas);
 if (renderer && !L.ready) { L.ready = true; loop(); }
+}
+function actorSync() {
+var seen = {};
+Array.prototype.forEach.call(host.querySelectorAll('[data-sw-model]'), function (el) {
+var w = actorWant(el.getAttribute('data-sw-model'), list, base, L.failed);
+if (!w || seen[w.name]) return;
+seen[w.name] = true;
+var a = L.actors[w.name], rec = L.assets[w.url];
+if (a) { a.el = el; return; }
+if (rec && rec.asset) { if (renderer) makeActor(w, el, rec.asset); }
+else asset(w.url).then(schedule, function () {});
+});
+Object.keys(L.actors).forEach(function (n) { if (!seen[n]) dropActor(n); });
+}
+function makeActor(w, el, a) {
+var m = new M.Creature(a, {height: 1}), act = {name: w.name, url: w.url, el: el, asset: a, model: m, holder: new T.Group(), clip: '', shown: false, size: 1,
+brain: {state: 'idle', heading: 0, x: 0, z: 0}};
+act.holder.add(m.root); scene3.add(act.holder);
+if (w.name === 'royal-dragon') { act.smoke = smokePool(act.holder); act.smokeNext = 3 + Math.random() * 3; }
+L.actors[w.name] = act;
+return act;
+}
+function dropActor(n) {
+var a = L.actors[n]; if (!a) return;
+delete L.actors[n];
+if (a.smoke) a.smoke.forEach(function (sp) { sp.material.dispose(); });
+a.model.dispose();
+if (a.holder.parent) a.holder.parent.remove(a.holder);
+}
+function clipTo(a, name) {
+if (a.clip === name) return;
+a.clip = name;
+var m = a.model, clip = null;
+if (name !== 'idle') { var low = name.toLowerCase(); clip = (a.asset.clips || []).filter(function (c) { return String(c.name).toLowerCase().indexOf(low) >= 0; })[0] || null; }
+var act = clip ? m.mixer.clipAction(clip) : m.actions.idle;
+Object.keys(m.actions).forEach(function (k) { m.actions[k].setEffectiveWeight(0); });
+if (a.extra && a.extra !== act) { a.extra.stop(); a.extra = null; }
+if (act) { if (clip) { act.reset(); act.play(); a.extra = act; } act.setEffectiveWeight(1); }
+}
+function restActors() { var changed = false; Object.keys(L.actors).forEach(function (n) { if (off(L.actors[n])) changed = true; }); return changed; }
+function actorFrame(a, P, dt) {
+var el = a.el, away = !el || !el.isConnected || (el.closest && el.closest('[data-sw-away]'));
+var r = away ? null : el.getBoundingClientRect(), box = r && r.width > 1 && r.height > 1 ? {left: r.left, top: r.top, width: r.width, height: r.height} : null;
+var heading = actorHeading(a.name, el && el.getAttribute('data-sw-yaw')), sw = a.asset.sw3d;
+var f = box && sw && fit(sw.pts, sw.low, heading, box, P, 1);
+if (!f) return off(a);
+var was = a.shown; a.shown = true; a.holder.visible = true;
+clipTo(a, (actorWant(el.getAttribute('data-sw-model'), list, base, L.failed) || {clip: 'idle'}).clip);
+a.holder.position.set(f.x, 0, f.z);
+a.model.root.rotation.y = a.brain.heading = heading;
+a.model.sizer.scale.setScalar(f.s); a.model.factor = a.size = f.s;
+a.model.mixer.update(still ? 0 : dt);
+if (a.smoke) smokeStep(a, still ? 0 : dt);
+return !was;
 }
 var hidden = '';
 function hide() {
@@ -1053,8 +1118,10 @@ if (!style) return;
 var esc = win.CSS && win.CSS.escape ? win.CSS.escape : function (s) { return String(s).replace(/["\\]/g, '\\$&'); };
 var css = Object.keys(L.creatures).filter(function (id) { return L.creatures[id].shown; }).map(function (id) { return '.world .scene-pet[data-sw-pet="' + esc(id) + '"]:not(.egg)>img'; });
 if (L.room && L.room.shown) css.push('.sp-room-pet[data-sw-room]>img');
+if (L.actors.king && L.actors.king.shown) css.push('[data-sw-model^="king "]>img');
 css = css.join(',');
 css = css ? css + '{opacity:0!important}' : '';
+if (L.actors['royal-dragon'] && L.actors['royal-dragon'].shown) css += '[data-sw-model^="royal-dragon "]>img{clip-path:inset(69.3% 0 0 0)!important}';
 if (L.room && L.room.shown) css += '.sp-room-pet[data-sw-room]{z-index:0!important}.sp-room-layer .sp-room-me-fig,.sp-room-layer .sp-room-me-fig *{pointer-events:none!important}';
 if (css !== hidden) { hidden = css; style.textContent = css; }
 }
@@ -1234,7 +1301,7 @@ if (!V1) { V1 = new T.Vector3(); V2 = new T.Vector3(); }
 roomSync();
 var changed = false, ids = Object.keys(L.creatures), i, cs = canvas.style;
 if (L.covered) {
-if (restAll(L.creatures)) hide();
+if (restAll(L.creatures) | restActors()) hide();
 if (L.room) roomFrame(dt);
 else { if (canvas.parentNode !== el) el.appendChild(canvas); cs.visibility = 'hidden'; }
 if (debug) win.__sw3d = api.state();
@@ -1248,7 +1315,7 @@ C.width = Math.max(0, Math.min(vw, sr.right) - C.left); C.height = Math.max(0, M
 var backdrop = el.querySelector('.world-backdrop'), loading = el.classList.contains('world-loading');
 if (!backdrop || loading || C.width < 2 || C.height < 2) {
 cs.visibility = 'hidden';
-if (restAll(L.creatures)) hide();
+if (restAll(L.creatures) | restActors()) hide();
 if (debug) win.__sw3d = api.state();
 return;
 }
@@ -1275,6 +1342,7 @@ if (hatching && c.born >= 0) c.born = clock;   // a new hatchling waits under th
 if (c.eatAfter) eatNow(c, eatChoice({pending: true, mood: c.mood, brain: c.brain, still: still}));
 place(c, f, m, P, CAMERA, heading0, dt);
 }
+Object.keys(L.actors).forEach(function (n) { if (actorFrame(L.actors[n], P, dt)) changed = true; });
 if (changed) hide();
 renderer.render(scene3, cam); L.frames++;
 if (debug) win.__sw3d = api.state();
@@ -1327,6 +1395,7 @@ var out = {version: VERSION, dead: L.dead, reason: L.reason, ready: L.ready, fra
 var info = function (c) { return {species: c.species, url: c.url, stage: c.stage, colour: c.colour, shown: !!c.shown, state: c.brain.state, scale: Math.round(c.brain.grow.scale * 1000) / 1000, puffs: c.puffs || 0, livePuffs: c.smoke ? c.smoke.filter(function (sp) { return sp.visible || sp.userData.life > 0; }).length : 0, rest: c.rest, mood: c.mood,
 plan: c.brain.plan.map(function (st) { return st.type; }), eatAfter: !!c.eatAfter, fromHome: Math.round(Math.hypot(c.brain.x, c.brain.z) / (c.size || 1) * 1000) / 1000, curl: Math.round(c.brain.pose.curl * 100) / 100}; };
 Object.keys(L.creatures).forEach(function (id) { out.creatures[id] = info(L.creatures[id]); });
+out.actors = {}; Object.keys(L.actors).forEach(function (n) { var a = L.actors[n]; out.actors[n] = {shown: !!a.shown, clip: a.clip, url: a.url, puffs: a.puffs || 0}; });
 out.models = list.slice(); out.room = L.room ? info(L.room) : null; out.roomOpen = !!L.roomEl; out.covered = !!L.covered;
 out.sprites = scene3 ? scene3.children.filter(function (o) { return o.isSprite; }).length : 0;
 return out;

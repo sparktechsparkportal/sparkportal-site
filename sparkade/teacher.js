@@ -13,8 +13,10 @@ people: '<circle cx="9" cy="7" r="3.2"/><circle cx="17" cy="8.5" r="2.6"/><path 
 pen: '<path d="M3 21l1-4.5L15.5 5l3.5 3.5L7.5 20zM16.9 3.6l1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.4 1.4a1.5 1.5 0 0 1 0 2.1L20.4 7z"/>',
 sliders: '<rect x="3" y="6" width="18" height="2.6" rx="1.3"/><rect x="3" y="11" width="18" height="2.6" rx="1.3"/><rect x="3" y="16" width="18" height="2.6" rx="1.3"/><circle cx="8" cy="7.3" r="3" stroke="#0E183C" stroke-width="2"/><circle cx="16" cy="12.3" r="3" stroke="#0E183C" stroke-width="2"/><circle cx="10" cy="17.3" r="3" stroke="#0E183C" stroke-width="2"/>',
 list: '<rect x="3" y="5" width="18" height="3" rx="1.5"/><rect x="3" y="10.5" width="18" height="3" rx="1.5"/><rect x="3" y="16" width="12" height="3" rx="1.5"/>',
-egg: '<path d="M12 2.5c3.6 0 6.5 5.6 6.5 10.5a6.5 6.5 0 0 1-13 0C5.5 8.1 8.4 2.5 12 2.5z"/>'
+egg: '<path d="M12 2.5c3.6 0 6.5 5.6 6.5 10.5a6.5 6.5 0 0 1-13 0C5.5 8.1 8.4 2.5 12 2.5z"/>',
+gift: '<path d="M3 9.5h18V14H3zM4.5 15h15v6.5h-15zM11 9.5h2v12h-2zM12 9C9.5 4 5.5 4.6 6.6 7.6c.6 1.6 3.4 1.6 5.4 1.4zM12 9c2.5-5 6.5-4.4 5.4-1.4-.6 1.6-3.4 1.6-5.4 1.4z"/>'
 };
+var WEAR = ['back', 'feet', 'top', 'neck', 'chest', 'face', 'head'], NOTNOW = 'spark-notnow-', GIVE_UPDATING = 'SPARKADE is being updated…';
 var SKY_NAMES = {auto: 'Auto', dawn: 'Dawn', day: 'Day', golden: 'Golden hour', night: 'Night'}, WEATHER_NAMES = {auto: 'Auto', clear: 'Clear', rain: 'Rain', snow: 'Snow'};
 
 function icon(name, cls) { return '<svg class="' + (cls || 'sp-ti') + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (PATHS[name] || PATHS.star) + '</svg>'; }
@@ -41,7 +43,7 @@ return used.concat(rest).slice(0, 4);
 function start(host) {
 var w = window, doc = document;
 var T = {on: false, pollMs: POLL_MS, behaviours: [], focus: null, pending: {}, screenPending: null, undo: null, undoTimer: 0, sheet: null, suppress: null,
-holdTimer: 0, name: '', loading: null, wired: null, asking: null};
+holdTimer: 0, name: '', loading: null, wired: null, asking: null, wishes: null, market: [], grants: {}, ungrants: {}, worn: {}, seq: 0, seen: null, royalLoad: null, gifts: null};
 
 function where() { return STORE + String(host.key() || ''); }
 function local(op, k, v) { try { if (op === 'get') return String(w.localStorage.getItem(k) || ''); if (v) w.localStorage.setItem(k, v); else w.localStorage.removeItem(k); } catch (e) {} return ''; }
@@ -149,6 +151,12 @@ if (!d || d.ok !== true || !Array.isArray(d.behaviours)) throw fail('response');
 T.behaviours = d.behaviours.filter(function (b) { return b && b.active !== false; }).map(function (b) {
 return {behaviourId: String(b.behaviourId), label: String(b.label || ''), points: Number(b.points) || 0, order: Number(b.order) || 0};
 }).sort(function (a, b) { return a.order - b.order; });
+var cw = d.cls && d.cls.wishes;
+T.wishes = Array.isArray(cw) ? cw.filter(function (x) { return x && x.wishId && x.studentId && x.itemId; }).map(function (x) {
+return {wishId: String(x.wishId), at: String(x.at || ''), studentId: String(x.studentId), itemId: String(x.itemId), price: Number(x.price) || 0, ready: x.ready === true, left: Math.max(0, Number(x.left) || 0)};
+}) : null;
+if (T.wishes) prune();
+if (Array.isArray(d.market)) T.market = d.market.filter(function (m) { return m && m.id; }).map(function (m) { return {id: String(m.id), kind: String(m.kind || ''), slot: String(m.slot || ''), name: String(m.name || ''), price: Number(m.price) || 0}; });
 return true;
 });
 }
@@ -171,7 +179,7 @@ return false;
 }
 function stop() {
 if (!T.on) return;
-T.on = false; T.focus = null; closeSheet(); dropUndo();
+T.on = false; T.focus = null; closeSheet(); dropUndo(); uncrown();
 var el = host.element();
 if (el) { el.removeAttribute('data-sp-teach'); }
 host.changed(); host.draw({selected: [], multi: false});
@@ -181,6 +189,7 @@ function attach() {
 var el = host.element();
 if (!el || !T.on) return;
 el.setAttribute('data-sp-teach', T.focus ? 'focus' : 'on');
+crown();
 var name = String(T.name || '').replace(/["\\<>\u0000-\u001f]/g, '').slice(0, 24);
 if (el.style && typeof el.style.setProperty === 'function') el.style.setProperty('--sp-teacher-name', '"' + name + '"');
 if (T.wired === el) return;
@@ -205,8 +214,12 @@ return '<button type="button" class="sp-qb ' + cls + '" data-sp="' + what + '"><
 function chrome() {
 var f = T.focus, top = '', middle = '';
 if (f) top += '<div class="sp-tdim" data-sp="teach-out" style="background:radial-gradient(ellipse 34% 44% at ' + f.px + '% ' + f.py + '%,rgba(5,9,25,0) 35%,rgba(5,9,25,.62) 100%)" aria-hidden="true"></div>';
-if (T.undo) top += '<button type="button" class="sp-tundo" data-sp="teach-undo">Undo · ' + esc(T.undo.who) + ' ' + signed(T.undo.points) + '</button>';
+if (T.undo) top += '<button type="button" class="sp-tundo" data-sp="teach-undo">' + (T.undo.grant ? esc(T.undo.label) + ' · Undo' : 'Undo · ' + esc(T.undo.who) + ' ' + signed(T.undo.points)) + '</button>';
 top += qb('teach-manage', 'sp-qb-room sp-qb-manage', 'Manage', 'list');
+if (w.SP_LAYERS && T.wishes) {
+var n = ready().length;
+top += '<button type="button" class="sp-qb sp-qb-gift" data-sp="teach-gifts" aria-label="Ready to give' + (n ? ': ' + n : '') + '"><span class="sp-qb-disc">' + icon('gift', 'sp-i') + (n ? '<span class="sp-qb-badge">' + n + '</span>' : '') + '</span><span class="sp-qb-label">Gifts</span></button>';
+}
 if (f) middle = ring(f);
 return {top: '<div class="sp-hud sp-hud-top">' + top + '</div>', middle: middle,
 bottom: '<div class="sp-hud sp-hud-bottom">' + qb('teach-screen', 'sp-qb-screen', 'Screen', 'sliders') + qb('teach-everyone', 'sp-qb-everyone', 'Everyone', 'people') + '</div>'};
@@ -221,6 +234,11 @@ out += '<button type="button" class="sp-trb" data-sp="teach-give" data-b="' + es
 });
 var cap = f.mode === 'one' ? '<button type="button" class="sp-tmore sp-troom" data-sp="teach-room" style="left:' + f.cx + 'px;top:' + f.capY + 'px">' + esc(host.firstName(f.who)) + '’s room</button>'
 : '<span class="sp-tcap" style="left:' + f.cx + 'px;top:' + f.capY + 'px" role="status">' + esc(f.who) + '</span>';
+var mine = f.mode === 'one' && T.wishes ? T.wishes.filter(function (x) { return x.studentId === f.ids[0]; }) : [];
+if (mine.length) cap += '<div class="sp-twish" style="left:' + f.cx + 'px;top:' + (f.capY + 50) + 'px"><b>' + esc(host.firstName(f.who)) + '’s wishes</b>' + mine.map(function (x) {
+var have = Math.max(0, x.price - x.left), pct = x.price ? Math.min(100, Math.round(have / x.price * 100)) : 100;
+return '<span class="sp-twish-i"><i style="--p:' + pct + '%"></i>' + esc(itemOf(x.itemId).name) + ' · ' + (x.ready ? 'Ready' : have + ' of ' + x.price + ' ✦') + '</span>';
+}).join('') + '</div>';
 return '<div class="sp-tring" style="left:' + f.rx + 'px;top:' + f.cy + 'px">' + out + '</div>' +
 '<button type="button" class="sp-tmore" data-sp="teach-more" style="left:' + f.cx + 'px;top:' + f.moreY + 'px">More reasons</button>' + cap;
 }
@@ -340,6 +358,8 @@ return false;
 host.draw({selected: [], multi: false});
 host.sfx.play(b.points < 0 ? 'penalty' : 'award');
 ids.forEach(function (id) { host.world().react(id, b.points, {from: before[id]}); });
+var r = royalOn();
+if (r && b.points > 0) try { r.sceptre(host.world(), ids, f.mode === 'all' ? {everyone: true} : {}); } catch (e) {}
 T.undoTimer = setTimeout(function () { dropUndo(true); }, UNDO_MS);
 host.say(who + ' ' + signed(b.points) + ', ' + b.label + '.');
 }
@@ -348,6 +368,7 @@ function undo() {
 var u = T.undo;
 if (!u) return;
 dropUndo();
+if (u.grant) { ungive(u); return; }
 var key = 'undo-' + u.batchId;
 T.pending[key] = {ids: u.ids, points: -u.points};
 var before = apply(u.ids, -u.points);
@@ -359,16 +380,35 @@ if (!ok) return null;
 return call('portalPointsUndo', {classId: u.classId, batchId: u.batchId});
 }).then(function () { delete T.pending[key]; host.refresh(); }, function () { delete T.pending[key]; note('The undo was not saved. Check the connection.'); host.refresh(); });
 }
-function through(snap) {
+function through(snap, own) {
 if (!snap || typeof snap !== 'object') return snap;
-var keys = Object.keys(T.pending);
-if (!keys.length && !T.screenPending) return snap;
-var out = clone(snap);
+if (!own) (snap.students || []).forEach(function (p) { var wn = T.worn[p.studentId] = T.worn[p.studentId] || {at: {}}; wn.dress = Array.isArray(p.dress) ? p.dress.slice() : []; });
+var now = (snap.students || []).map(function (p) { return p.studentId; }), r = royalOn();
+if (T.seen && r && now.some(function (id) { return T.seen.indexOf(id) < 0; })) r.wave();
+T.seen = now;
+var keys = Object.keys(T.pending), gk = Object.keys(T.grants), uk = Object.keys(T.ungrants);
+if (!keys.length && !T.screenPending && !gk.length && !uk.length) return snap;
+var out = dressUp(clone(snap));
 keys.forEach(function (k) {
 var p = T.pending[k];
 (out.students || []).forEach(function (s) { if (p.ids.indexOf(s.studentId) >= 0) { s.points = (Number(s.points) || 0) + p.points; s.peak = Math.max(Number(s.peak) || 0, s.points); } });
 });
 if (T.screenPending) out.screen = clone(T.screenPending);
+return out;
+}
+
+function dressUp(out) {
+Object.keys(T.grants).concat(Object.keys(T.ungrants)).forEach(function (k) {
+var g = T.grants[k] || T.ungrants[k], on = !!T.grants[k], wn = T.worn[g.studentId];
+if (!g.slot || (on && wn && wn.at[g.slot] > g.seq)) return;
+(out && out.students || []).forEach(function (s) {
+if (s.studentId !== g.studentId) return;
+var d = (Array.isArray(s.dress) ? s.dress : []).filter(function (id) { return on ? itemOf(id).slot !== g.slot : id !== g.itemId; });
+if (on) d.push(g.itemId);
+d.sort(function (a, b) { return WEAR.indexOf(itemOf(a).slot) - WEAR.indexOf(itemOf(b).slot); });
+if (d.length) s.dress = d; else delete s.dress;
+});
+});
 return out;
 }
 
@@ -382,6 +422,7 @@ var next = clone(host.snap());
 (next.students || []).forEach(function (s) { if (s.studentId === id && s.companion) { var c = r.companion || {}; s.companion.stage = Math.max(1, Number(c.stage) || 1); if (c.stageName) s.companion.stageName = c.stageName; else delete s.companion.stageName; } });
 host.setSnap(next); host.draw({});
 host.world().hatch(id);
+var r = royalOn(); if (r) r.wave();
 host.refresh();
 }).catch(function () { note('The egg could not hatch just now. Try again.'); });
 }
@@ -414,8 +455,10 @@ host.h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick:
 }
 function screenNow() {
 var s = host.snap() && host.snap().screen, b = s && s.banner;
-return {banner: {text: b && typeof b.text === 'string' ? b.text : '', on: !!(b && b.on)}, sparkles: !s || s.sparkles !== false, crest: !s || s.crest !== false,
+var out = {banner: {text: b && typeof b.text === 'string' ? b.text : '', on: !!(b && b.on)}, sparkles: !s || s.sparkles !== false, crest: !s || s.crest !== false,
 sky: s && s.sky || 'auto', weather: s && s.weather || 'auto', care: !s || s.care !== false, sound: !s || s.sound !== false};
+if (s && Object.prototype.hasOwnProperty.call(s, 'threeD')) { out.threeD = s.threeD === true; out.market = s.market !== false; out.flight = s.flight !== false; }
+return out;
 }
 function saveScreen(screen, msg) {
 var snap = host.snap();
@@ -424,7 +467,9 @@ var text = String(screen.banner.text || '').replace(/\s+/g, ' ').trim();
 if (/[<>]/.test(text)) { msg.textContent = 'The banner cannot contain < or >.'; return Promise.resolve(false); }
 if (text.length > MAX_BANNER) { msg.textContent = 'The banner can be up to ' + MAX_BANNER + ' characters.'; return Promise.resolve(false); }
 if (screen.banner.on && !text) { msg.textContent = 'Type the banner words first, or switch the banner off.'; return Promise.resolve(false); }
+var v46 = 'threeD' in screen ? {threeD: !!screen.threeD, market: !!screen.market, flight: !!screen.flight} : null;
 screen = {banner: {text: text, on: !!screen.banner.on}, sparkles: !!screen.sparkles, crest: !!screen.crest, sky: screen.sky, weather: screen.weather, care: !!screen.care, sound: !!screen.sound};
+if (v46) Object.assign(screen, v46);
 var next = clone(snap); next.screen = clone(screen); host.setSnap(next); T.screenPending = clone(screen);
 host.world().setScreen(screen);
 msg.textContent = 'Saving…';
@@ -439,7 +484,8 @@ return true;
 }
 function screenSheet() {
 leaveFocus();
-var cur = screenNow(), st = {on: cur.banner.on, care: cur.care, sound: cur.sound}, W = host.W;
+var cur = screenNow(), st = {on: cur.banner.on, care: cur.care, sound: cur.sound}, W = host.W, v46 = 'threeD' in cur;
+if (v46) { st.threeD = cur.threeD; st.market = cur.market; st.flight = cur.flight; }
 var msg = host.h('p', {class: 'sp-pin-msg sp-teach-msg', role: 'status', text: ''});
 var banner = host.h('textarea', {id: 'sp-tbanner', class: 'sp-field sp-tbanner', rows: '2', maxlength: String(MAX_BANNER), spellcheck: 'false', autocomplete: 'off', placeholder: 'A line for the class over the gate'});
 banner.value = cur.banner.text;
@@ -454,7 +500,11 @@ return {sel: sel, row: host.h('label', {class: 'sp-trow', for: id}, host.h('span
 }
 var skies = W && Array.isArray(W.SKIES) ? W.SKIES : ['auto', 'dawn', 'day', 'golden', 'night'], weathers = W && Array.isArray(W.WEATHERS) ? W.WEATHERS : ['auto', 'clear', 'rain', 'snow'];
 var sky = pick('sp-tsky', 'Sky', skies, SKY_NAMES, cur.sky), weather = pick('sp-tweather', 'Weather', weathers, WEATHER_NAMES, cur.weather);
-var read = function () { return {banner: {text: String(banner.value || ''), on: st.on}, sparkles: cur.sparkles, crest: cur.crest, sky: sky.sel.value, weather: weather.sel.value, care: st.care, sound: st.sound}; };
+var read = function () {
+var r = {banner: {text: String(banner.value || ''), on: st.on}, sparkles: cur.sparkles, crest: cur.crest, sky: sky.sel.value, weather: weather.sel.value, care: st.care, sound: st.sound};
+if (v46) { r.threeD = st.threeD; r.market = st.market; r.flight = st.flight; }
+return r;
+};
 var preset = function (name) {
 var s = read(), text = String(banner.value || '').trim();
 if (name === 'celebrate') { closeSheet(); host.world().celebrate('fireworks'); host.say('Celebration!'); return; }
@@ -471,10 +521,146 @@ host.h('button', {type: 'button', class: 'sp-pill sp-tpreset', 'data-preset': 'q
 host.h('button', {type: 'button', class: 'sp-pill sp-tpreset', 'data-preset': 'celebrate', onclick: function () { preset('celebrate'); }}, 'Celebration')),
 host.h('label', {class: 'sp-field-label', for: 'sp-tbanner'}, host.h('span', {class: 'sp-field-name', text: 'Banner (up to ' + MAX_BANNER + ' characters)'}), banner),
 toggle('on', 'Banner'), sky.row, weather.row, toggle('care', 'Care at home'), toggle('sound', 'Sound on pupils’ screens'),
+v46 ? toggle('threeD', '3D companions') : null, v46 ? toggle('market', 'Market at home') : null, v46 ? toggle('flight', 'King’s flight at milestones') : null,
 msg,
 host.h('button', {type: 'button', class: 'sp-btn sp-tsave', onclick: function () { saveScreen(read(), msg); }}, 'Save'),
 host.h('button', {type: 'button', class: 'sp-link sp-tleave', onclick: function () { closeSheet(); leave(); }}, 'Leave teacher mode'),
 host.h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick: closeSheet}, 'Close')]);
+}
+
+function tag(js, css) {
+return new Promise(function (resolve, reject) {
+var head = doc.head || doc.body;
+if (css) { var l = doc.createElement('link'); l.rel = 'stylesheet'; l.href = css; head.appendChild(l); }
+var t = doc.createElement('script'); t.src = js; t.onload = resolve; t.onerror = reject; head.appendChild(t);
+});
+}
+function royal() {
+if (w.SparkadeRoyal) return Promise.resolve(w.SparkadeRoyal);
+var L = w.SP_LAYERS && w.SP_LAYERS.royal;
+if (!L || typeof L.js !== 'string') return Promise.reject(fail('royal'));
+if (!T.royalLoad) {
+T.royalLoad = Promise.resolve().then(function () {
+return typeof host.lazy === 'function' ? host.lazy(L.js, L.css) : host.W && typeof host.W.lazy === 'function' ? host.W.lazy(L.js, L.css) : tag(L.js, L.css);
+}).then(function () { if (!w.SparkadeRoyal) throw fail('royal'); return w.SparkadeRoyal; });
+T.royalLoad.catch(function () { T.royalLoad = null; });
+}
+return T.royalLoad;
+}
+function crown() { if (T.on && w.SP_LAYERS) royal().then(function (r) { var world = host.world(); if (T.on && world) r.king(world, {sfx: host.sfx}); }, function () {}); }
+function uncrown() { try { if (w.SparkadeRoyal) w.SparkadeRoyal.unking(); } catch (e) {} }
+function royalOn() { return T.on && w.SparkadeRoyal ? w.SparkadeRoyal : null; }
+function itemOf(id) {
+var m = T.market.filter(function (x) { return x.id === id; })[0], M = w.SparkadeMarket, c = M && typeof M.item === 'function' ? M.item(id) : null;
+var name = m && m.name || c && c.name || String(id || '').replace(/^mk-/, '').replace(/-/g, ' ');
+return {id: id, name: name.charAt(0).toUpperCase() + name.slice(1), kind: m && m.kind || c && c.kind || 'wear', slot: m && m.slot || c && c.slot || '', price: m ? m.price : c ? c.price : 0};
+}
+function hidden() {
+try { var v = JSON.parse(local('get', NOTNOW + host.key()) || '[]'); return Array.isArray(v) ? v.filter(function (e) { return e && typeof e === 'object' && e.wishId; }) : []; } catch (e) { return []; }
+}
+function keepHidden(v) { if (v.length) local('set', NOTNOW + host.key(), JSON.stringify(v.slice(-200))); else local('set', NOTNOW + host.key(), ''); }
+function off(x, v) { return (v || hidden()).some(function (e) { return e.wishId === x.wishId && String(e.at || '') === x.at; }); }
+function notNow(x) { var v = hidden().filter(function (e) { return e.wishId !== x.wishId; }); v.push({wishId: x.wishId, at: x.at}); keepHidden(v); }
+function prune() { var v = hidden(), k = v.filter(function (e) { return (T.wishes || []).some(function (x) { return off(x, [e]); }); }); if (k.length !== v.length) keepHidden(k); }
+function giving(x) { return Object.keys(T.grants).some(function (k) { return T.grants[k].studentId === x.studentId && T.grants[k].itemId === x.itemId; }); }
+function ready() { var v = hidden(); return (T.wishes || []).filter(function (x) { return x.ready && !off(x, v) && !giving(x); }); }
+function refreshWishes() { return behaviours(true).then(function () { if (T.on) { host.draw({}); drawGifts(); } }, function () {}); }
+function giftSheet() {
+leaveFocus();
+var list = host.h('div', {class: 'sp-tgifts'}), msg = host.h('p', {class: 'sp-sheet-note sp-tgift-note', role: 'status', text: ''});
+openSheet('Ready to give', [host.h('h2', {class: 'sp-sheet-name', text: 'Ready to give'}), msg, list, host.h('button', {type: 'button', class: 'sp-btn-quiet sp-sheet-close', onclick: closeSheet}, 'Close')]);
+T.gifts = {list: list, msg: msg};
+drawGifts(); refreshWishes();
+}
+function drawGifts() {
+var g = T.gifts;
+if (!g || !g.list.isConnected || !T.sheet) { T.gifts = null; return; }
+var cards = ready().map(function (x) {
+var it = itemOf(x.itemId), p = pupilOf(x.studentId), who = p ? p.name : '', face = '', pic = '', crouch = false;
+try { var world = host.world(), img = world && world.element && world.element.querySelector('[data-sw-pupil="' + x.studentId.replace(/["\\]/g, '') + '"] img.sw-figure-img'); face = img ? img.getAttribute('src') : ''; crouch = !!img && img.getAttribute('data-pose') === 'crouch'; } catch (e) {}
+try { pic = w.SparkadeKit && typeof w.SparkadeKit.art === 'function' ? String(w.SparkadeKit.art(x.itemId) || '') : ''; } catch (e) {}
+return host.h('div', {class: 'sp-tgift', 'data-wish': x.wishId},
+host.h('span', {class: 'sp-tgift-face' + (crouch ? ' sp-tgift-crouch' : ''), html: face ? '<img src="' + esc(face) + '" alt="">' : esc(who.charAt(0))}),
+host.h('span', {class: 'sp-tgift-item', html: pic ? '<img src="' + esc(pic) + '" alt="">' : icon('gift')}),
+host.h('span', {class: 'sp-tgift-text'}, host.h('b', {text: host.firstName(who)}), host.h('span', {text: it.name}), host.h('span', {class: 'sp-tgift-price', text: x.price + ' ✦'})),
+host.h('button', {type: 'button', class: 'sp-btn sp-tgift-give', onclick: function () { grant(x.studentId, x.itemId); drawGifts(); }}, 'Give'),
+host.h('button', {type: 'button', class: 'sp-btn-quiet sp-tgift-not', onclick: function () { notNow(x); drawGifts(); host.draw({}); }}, 'Not now'));
+});
+g.list.replaceChildren.apply(g.list, cards);
+g.msg.textContent = cards.length ? '' : 'No wishes are ready to give just now.';
+}
+function grant(studentId, itemId) {
+try { return giveNow(studentId, itemId).then(null, function () { return {ok: false, reason: 'error'}; }); } catch (e) { return Promise.resolve({ok: false, reason: 'error'}); }
+}
+function dressOf(snap, id) { var p = snap && (snap.students || []).filter(function (s) { return s.studentId === id; })[0]; return p && Array.isArray(p.dress) ? p.dress.slice() : []; }
+function giveNow(studentId, itemId) {
+var snap = host.snap();
+if (!T.on || !snap) return Promise.resolve({ok: false, reason: 'teacher'});
+studentId = String(studentId); itemId = String(itemId);
+var it = itemOf(itemId), who = host.firstName(nameOf(studentId)) || 'This pupil', classId = snap.classId;
+var grantId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10), g = {studentId: studentId, itemId: itemId, slot: it.kind === 'wear' ? it.slot : '', seq: ++T.seq};
+var before = dressOf(snap, studentId).filter(function (id) { return itemOf(id).slot === g.slot; });
+T.grants[grantId] = g;
+var r = royalOn();
+if (r) try { r.gift(host.world(), studentId, itemId, it.kind); } catch (e) {}
+try { if (w.SparkadeKit && typeof w.SparkadeKit.given === 'function') w.SparkadeKit.given(studentId, itemId); } catch (e) {}
+if (g.slot) { host.setSnap(through(host.snap(), true)); host.draw({}); }
+var slotOf = function (d) { return d.filter(function (id) { return itemOf(id).slot === g.slot; }); };
+var setDress = function (d, whole) {
+var out = clone(host.snap());
+(out && out.students || []).forEach(function (s) {
+if (s.studentId !== studentId) return;
+d = (whole ? [] : (Array.isArray(s.dress) ? s.dress : []).filter(function (id) { return itemOf(id).slot !== g.slot; })).concat(d);
+d.sort(function (a, b) { return WEAR.indexOf(itemOf(a).slot) - WEAR.indexOf(itemOf(b).slot); });
+if (d.length) s.dress = d; else delete s.dress;
+});
+host.setSnap(dressUp(out)); host.draw({});
+};
+var back = function (text, reason) {
+try {
+delete T.grants[grantId];
+var wn = T.worn[studentId];
+if (g.slot) setDress(wn && wn.dress ? slotOf(wn.dress) : reason === 'owned' ? before : before.filter(function (id) { return id !== itemId; }));
+note(text); drawGifts(); host.refresh();
+} catch (e) {}
+return {ok: false, reason: reason};
+};
+return new Promise(function (resolve) { resolve(call('portalPointsGrant', {classId: classId, studentId: studentId, itemId: itemId, grantId: grantId})); }).then(function (res) {
+if (res && res.ok === true) {
+try {
+delete T.grants[grantId];
+if (g.slot && Array.isArray(res.dress)) {
+var wn = T.worn[studentId] = T.worn[studentId] || {at: {}};
+wn.dress = res.dress.map(String); wn.at[g.slot] = g.seq; setDress(wn.dress, true);
+}
+if (T.wishes) T.wishes = T.wishes.filter(function (x) { return !(x.studentId === studentId && x.itemId === itemId); });
+dropUndo();
+T.undo = {batchId: grantId, ids: [studentId], points: 0, who: who, classId: classId, grant: g, label: 'Gave ' + who + ' the ' + it.name};
+T.undoTimer = setTimeout(function () { dropUndo(true); }, UNDO_MS);
+host.say(T.undo.label + '.'); host.draw({}); drawGifts(); host.refresh(); refreshWishes();
+} catch (e) {}
+return res;
+}
+var why = res && res.reason, wish = (T.wishes || []).filter(function (x) { return x.studentId === studentId && x.itemId === itemId; })[0];
+var left = res && isFinite(res.price) && isFinite(res.balance) ? Math.max(0, res.price - res.balance) : wish ? wish.left : 0;
+if (why === 'sparkles') return back(who + ' is saving up: ' + left + ' more ✦', why);
+if (why === 'owned') return back(who + ' has it already.', why);
+if (why === 'off') return back('Turn it on in the Market first.', why);
+if (why === 'missing') return back(GIVE_UPDATING, why);
+return back('The gift was not saved. Check the connection, then try again.', typeof why === 'string' && why ? why : 'response');
+}, function (e) {
+var code = e && e.code;
+return back(code === 'missing' ? GIVE_UPDATING : code === 'session' ? 'Sign in again, then give it again.' : 'The gift was not saved. Check the connection, then try again.', code || 'error');
+});
+}
+function ungive(u) {
+T.ungrants[u.batchId] = u.grant;
+host.setSnap(through(host.snap(), true)); host.draw({});
+host.say('Taken back: ' + u.label + '.');
+call('portalPointsUndo', {classId: u.classId, batchId: u.batchId}).then(function () {
+var wn = T.worn[u.grant.studentId]; if (wn && wn.dress) wn.dress = wn.dress.filter(function (id) { return id !== u.grant.itemId; });
+delete T.ungrants[u.batchId]; host.refresh(); refreshWishes(); },
+function () { delete T.ungrants[u.batchId]; note('The undo was not saved. Check the connection.'); host.refresh(); });
 }
 function manage() { closeSheet(); leaveFocus(); try { w.open(MANAGE, '_top'); } catch (e) { w.location.href = MANAGE; } }
 var noteTimer = 0;
@@ -495,13 +681,14 @@ else if (what === 'teach-undo') undo();
 else if (what === 'teach-manage') manage();
 else if (what === 'teach-screen') screenSheet();
 else if (what === 'teach-everyone') everyone();
+else if (what === 'teach-gifts') giftSheet();
 else if (what === 'teach-room') { var who = T.focus && T.focus.mode === 'one' ? T.focus.ids[0] : ''; leaveFocus(); if (who) host.openRoom(who); }
 else return false;
 return true;
 }
 if (typeof w.addEventListener === 'function') w.addEventListener('pageshow', function (e) { if (e && e.persisted && T.on) behaviours(true).catch(function () {}); });
 
-var api = {enter: enter, leave: leave, attach: attach, chrome: chrome, pupil: pupil, hold: hold, action: action, through: through, pollMs: POLL_MS,
+var api = {enter: enter, leave: leave, attach: attach, chrome: chrome, pupil: pupil, hold: hold, action: action, through: through, grant: grant, pollMs: POLL_MS,
 reasons: function () { return topReasons(host.snap(), T.behaviours); }, state: function () { return T; }};
 Object.defineProperty(api, 'on', {get: function () { return T.on; }});
 return api;

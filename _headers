@@ -12,5 +12,11 @@
   Cache-Control: public, max-age=604800
 /sparkade/figures/*
   Cache-Control: public, max-age=604800
+/sparkade/wear/*
+  Cache-Control: public, max-age=604800
+/sparkade/dorm/*
+  Cache-Control: public, max-age=604800
+/sparkade/royal/*
+  Cache-Control: public, max-age=604800
 /sparkade/models/*
   Cache-Control: public, max-age=86400
